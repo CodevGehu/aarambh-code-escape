@@ -13,12 +13,12 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [showTutorial, setShowTutorial] = useState(false);
   const [elapsedTime, setElapsedTime] = useState('');
-  const [quizStatus, setQuizStatus] = useState(null); 
+  const [quizStatus, setQuizStatus] = useState(null);
   const [bannerMsg, setBannerMsg] = useState(null);
   const [showEndedModal, setShowEndedModal] = useState(false);
   const previousQuizStatus = useRef(null);
   const bannerTimeoutRef = useRef(null);
-  
+
   const location = useLocation();
   const [animatedLevel, setAnimatedLevel] = useState(location.state?.justCompletedLevel || null);
 
@@ -84,19 +84,19 @@ export default function Dashboard() {
   useEffect(() => {
     if (quizStatus !== null) {
       const prev = previousQuizStatus.current;
-      
+
       // Trigger banner if transitioning to active
       if (prev !== null && prev !== 'active' && quizStatus === 'active') {
         if (bannerTimeoutRef.current) clearTimeout(bannerTimeoutRef.current);
         setBannerMsg({ type: 'success', text: 'The Treasure Hunt has started! Good luck, pirate!' });
         bannerTimeoutRef.current = setTimeout(() => setBannerMsg(null), 5000);
       }
-      
+
       // Trigger ended modal if transitioning to ended
       if (prev !== null && prev !== 'ended' && quizStatus === 'ended') {
         setShowEndedModal(true);
       }
-      
+
       previousQuizStatus.current = quizStatus;
     }
   }, [quizStatus]);
@@ -157,9 +157,9 @@ export default function Dashboard() {
           borderRadius: 'var(--radius-md)',
           color: bannerMsg.type === 'success' ? '#A5D6A7' : bannerMsg.type === 'done' ? '#FFFFFF' : '#EF9A9A',
           textAlign: 'center', fontWeight: '600', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', zIndex: 90,
-          boxShadow: bannerMsg.type === 'done' 
-            ? '0 12px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 193, 7, 0.25)' 
-            : '0 8px 32px rgba(0, 0, 0, 0.3)', 
+          boxShadow: bannerMsg.type === 'done'
+            ? '0 12px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 193, 7, 0.25)'
+            : '0 8px 32px rgba(0, 0, 0, 0.3)',
           fontSize: '0.98rem', letterSpacing: '0.5px'
         }}>
           {bannerMsg.text}
@@ -231,7 +231,7 @@ export default function Dashboard() {
 
         {/* Main Map Area full screen */}
         <main className="dashboard-map-area animate-scale-in">
-          <QuestMap 
+          <QuestMap
             currentLevel={team?.current_level || 0}
             gameFinished={gameFinished}
             onLevelClick={handleLevelClick}

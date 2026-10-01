@@ -84,7 +84,7 @@ export default function QuestionPage() {
       }
     } catch (err) {
       console.error('Submission error:', err);
-      
+
       const errCode = err.response?.data?.code;
       const errMsg = err.response?.data?.error || '';
       const isIncorrect = errCode === 'INCORRECT_ANSWER' || errMsg.toLowerCase().includes('incorrect');
@@ -172,7 +172,7 @@ export default function QuestionPage() {
                 Level {levelNum} — Conquered!
               </h2>
               <p style={{ color: 'rgba(245,230,200,0.7)', marginBottom: 'var(--space-lg)', maxWidth: '400px', margin: '0 auto var(--space-lg)' }}>
-                Your crew already claimed the treasure from <strong style={{ color: 'var(--color-gold)' }}>{levelNames[levelNum]}</strong>. 
+                Your crew already claimed the treasure from <strong style={{ color: 'var(--color-gold)' }}>{levelNames[levelNum]}</strong>.
                 Don't be greedy, pirate — there are more seas to sail!
               </p>
               {team?.level_points?.[levelNum] !== undefined && (
@@ -239,7 +239,7 @@ export default function QuestionPage() {
               </div>
 
               {/* Question text */}
-              <div style={{ 
+              <div style={{
                 marginBottom: 'var(--space-2xl)',
                 background: 'rgba(0, 0, 0, 0.65)',
                 padding: 'var(--space-lg)',

@@ -64,7 +64,7 @@ const submitProgress = async (req, res) => {
       return res.status(400).json({ code: 'INCORRECT_ANSWER', error: 'Incorrect answer' });
     }
 
-    // 7. Atomic update lock to prevent Race Conditions 
+    // 7. Atomic update lock to prevent Race Conditions
     const isFinalLevel = levelNum >= 5;
     const updatePayload = {
       $inc: { total_points: question.points },
@@ -73,7 +73,7 @@ const submitProgress = async (req, res) => {
         [`level_points.${levelNum}`]: question.points  // Track exact points per level
       }
     };
-    
+
     if (isFinalLevel) {
       updatePayload.$set.end_time = new Date();
     }

@@ -70,7 +70,7 @@ export default function QuestMap({ currentLevel, gameFinished, onLevelClick, lev
   const activeLevel = gameFinished ? 6 : (currentLevel || 1);
   const shipTargetLevel = Math.min(activeLevel, 5);
   const avatarPosition = islandCoordinates[shipTargetLevel] || islandCoordinates[1];
-  
+
   // Custom alignment for hover cards near the edges of the screen
   const hoverShifts = {
     1: { shift: '-16%', arrow: '16%' },
@@ -88,8 +88,8 @@ export default function QuestMap({ currentLevel, gameFinished, onLevelClick, lev
     const from = islandCoordinates[startLevel];
     const to = islandCoordinates[endLevel];
     if (!from || !to || startLevel === endLevel) return null;
-    
-    const index = startLevel - 1; 
+
+    const index = startLevel - 1;
     const x1 = parseFloat(from.left);
     const y1 = parseFloat(from.top);
     const x2 = parseFloat(to.left);
@@ -163,7 +163,7 @@ export default function QuestMap({ currentLevel, gameFinished, onLevelClick, lev
         // Points earned at this level from server data
         const earnedPoints = teamLevelPoints?.[level];
         const displayPoints = earnedPoints !== undefined ? earnedPoints : levelPoints[level];
-        
+
         const shiftData = hoverShifts[level];
 
         let statusClass = 'island-locked';
@@ -176,8 +176,8 @@ export default function QuestMap({ currentLevel, gameFinished, onLevelClick, lev
           <div
             key={level}
             className={`island-node ${statusClass}`}
-            style={{ 
-              top: coords.top, 
+            style={{
+              top: coords.top,
               left: coords.left,
               '--card-shift': shiftData.shift,
               '--card-arrow-pos': shiftData.arrow

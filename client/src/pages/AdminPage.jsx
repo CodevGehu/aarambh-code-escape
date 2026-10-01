@@ -114,7 +114,7 @@ export default function AdminPage() {
       const res = await api.get('/export/excel', {
         responseType: 'blob' // Important: ensures we receive raw binary data for the excel
       });
-      
+
       const blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');

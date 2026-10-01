@@ -4,7 +4,7 @@ const adminAuth = (req, res, next) => {
   // Strictly require token from Authorization header
   const authHeader = req.header('Authorization');
   let token;
-  
+
   if (authHeader && authHeader.startsWith('Bearer ')) {
     token = authHeader.replace('Bearer ', '');
   }
