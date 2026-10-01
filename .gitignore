@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.vercel/
+.private/
+.env
+.env.*
+!.env.example
+*.log
+*.credentials.csv
+.DS_Store
+
+.vercel

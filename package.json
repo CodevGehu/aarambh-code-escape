@@ -1,0 +1,19 @@
+{
+  "name": "aarambh-code-escape",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Aarambh Code Escape Room — team competition platform",
+  "engines": { "node": "22.x" },
+  "scripts": {
+    "build": "npm run build --prefix client",
+    "test": "npm test --prefix server",
+    "server": "cd server && npm run dev",
+    "client": "cd client && npm run dev",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "seed": "cd server && node seed/seedQuestions.js",
+    "install-all": "npm install && cd server && npm install && cd ../client && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

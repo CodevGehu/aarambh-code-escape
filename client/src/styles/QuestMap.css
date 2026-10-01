@@ -1,0 +1,419 @@
+/* ======================================================
+   QUEST MAP — Full screen dashboard map + all island UI
+   ====================================================== */
+
+/* Full Screen Layout for Dashboard */
+.dashboard-fullscreen {
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-layout {
+  display: flex;
+  flex: 1;
+  padding: 72px 16px 12px 16px; /* tighter padding — less wasted space */
+  gap: 16px;
+  height: calc(100vh - 72px);
+  overflow: hidden;
+}
+
+.dashboard-sidebar {
+  width: 270px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: rgba(15, 20, 30, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(212, 168, 67, 0.2);
+  border-radius: 12px;
+  padding: 20px;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+}
+
+.dashboard-map-area {
+  flex: 1;
+  position: relative;
+  border-radius: 12px;
+  overflow: visible; /* allow hover cards to overflow */
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  background: #0d121b;
+  border: 1px solid rgba(212, 168, 67, 0.3);
+  /* clip the actual map image but not tooltips */
+  isolation: isolate;
+}
+
+/* ============ QuestMap Container ============ */
+.quest-map-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  /* overflow: hidden removed so hover cards don't get clipped at the top edge */
+}
+
+.quest-map-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+  display: block;
+  border-radius: 12px;
+}
+
+.quest-map-paths {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ============ Island Nodes ============ */
+.island-node {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 5;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.island-node:hover {
+  transform: translate(-50%, -50%) scale(1.15);
+  z-index: 20; /* lift above other nodes when hovered */
+}
+
+.island-locked {
+  cursor: default;
+}
+
+.island-marker {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  overflow: visible;
+}
+
+.island-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 6px;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
+}
+
+.island-status-icon {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(10, 16, 28, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid currentColor;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.8);
+}
+
+/* ——— State Colours ——— */
+.island-locked .island-marker {
+  color: rgba(245, 230, 200, 0.35);
+  filter: grayscale(60%) brightness(0.7);
+}
+
+.island-completed .island-marker {
+  color: #4CAF50;
+}
+
+.island-current .island-marker {
+  color: #FFC107;
+}
+
+@keyframes pulse-glow-gold {
+  0%   { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4); }
+  70%  { box-shadow: 0 0 0 14px rgba(255, 193, 7, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+}
+
+/* ============ Hover Card ============ */
+.island-hover-card {
+  position: absolute;
+  bottom: calc(100% + 14px); /* appear ABOVE the island node */
+  left: 50%;
+  transform: translateX(var(--card-shift, -50%)) translateY(10px) scale(0.94);
+  width: 210px;
+  background: rgba(8, 16, 30, 0.96);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(212, 168, 67, 0.35);
+  border-radius: 14px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(212,168,67,0.08) inset;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.4,0,0.2,1);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.island-hover-card--visible {
+  opacity: 1;
+  transform: translateX(var(--card-shift, -50%)) translateY(0) scale(1);
+}
+
+/* Align cards on the right for nodes near the left/top edge */
+.hover-card-level-1, .hover-card-level-2, .hover-card-level-3, .hover-card-level-4 {
+  bottom: auto;
+  top: 50%;
+  left: calc(100% + 14px);
+  transform: translateY(-50%) translateX(-10px) scale(0.94);
+}
+
+.hover-card-level-1.island-hover-card--visible,
+.hover-card-level-2.island-hover-card--visible,
+.hover-card-level-3.island-hover-card--visible,
+.hover-card-level-4.island-hover-card--visible {
+  transform: translateY(-50%) translateX(0) scale(1);
+}
+
+/* Arrow */
+.island-hover-card::after {
+  content: '';
+  position: absolute;
+  bottom: -7px;
+  left: var(--card-arrow-pos, 50%);
+  transform: translateX(-50%);
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 7px solid rgba(212, 168, 67, 0.35);
+}
+
+/* Modified arrows for right-aligned cards */
+.hover-card-level-1::after,
+.hover-card-level-2::after,
+.hover-card-level-3::after,
+.hover-card-level-4::after {
+  bottom: auto;
+  top: 50%;
+  left: -7px;
+  transform: translateY(-50%);
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-right: 7px solid rgba(212, 168, 67, 0.35);
+  border-left: none;
+}
+
+.island-hover-card__img-wrap {
+  position: relative;
+  width: 100%;
+  height: 110px;
+  overflow: hidden;
+}
+
+.island-hover-card__img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+  display: block;
+}
+
+/* Per-card image position tweaks */
+.hover-card-level-1 .island-hover-card__img-wrap img {
+  object-position: center -80px;
+}
+
+.hover-card-level-2 .island-hover-card__img-wrap img {
+  object-position: center -50px;
+}
+
+.island-hover-card__badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  backdrop-filter: blur(6px);
+  border: 1px solid;
+}
+
+.badge-done {
+  background: rgba(76, 175, 80, 0.25);
+  border-color: rgba(76, 175, 80, 0.6);
+  color: #81C784;
+}
+
+.badge-current {
+  background: rgba(255, 193, 7, 0.2);
+  border-color: rgba(255, 193, 7, 0.6);
+  color: #FFD54F;
+}
+
+.badge-locked {
+  background: rgba(100, 100, 120, 0.2);
+  border-color: rgba(245, 230, 200, 0.25);
+  color: rgba(245, 230, 200, 0.5);
+}
+
+.island-hover-card__body {
+  padding: 10px 13px 12px;
+}
+
+.island-hover-card__sub {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: rgba(245, 230, 200, 0.45);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.island-hover-card__title {
+  font-family: 'OnePiece', serif;
+  font-size: 1.05rem;
+  color: var(--color-gold);
+  margin-bottom: 4px;
+  letter-spacing: 1px;
+}
+
+.island-hover-card__desc {
+  font-size: 0.7rem;
+  color: rgba(245, 230, 200, 0.55);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.island-hover-card__pts {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-gold-light);
+  margin-bottom: 6px;
+}
+
+.pts-icon {
+  font-size: 0.8rem;
+}
+
+.island-hover-card__done-msg {
+  font-size: 0.68rem;
+  color: #81C784;
+  font-style: italic;
+}
+
+.island-hover-card__action-msg {
+  font-size: 0.68rem;
+  color: #FFD54F;
+  font-style: italic;
+}
+
+.island-hover-card__locked-msg {
+  font-size: 0.68rem;
+  color: rgba(245, 230, 200, 0.4);
+  font-style: italic;
+}
+
+/* ============ Ship / Avatar ============ */
+.quest-map-avatar {
+  position: absolute;
+  transform: translate(44px, -52%);
+  z-index: 10;
+  pointer-events: none;
+  /* smooth sail between islands */
+  transition: top 1.6s cubic-bezier(0.4, 0, 0.2, 1), left 1.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.avatar-img {
+  width: 200px;
+  height: auto;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.7));
+}
+
+.avatar-shadow {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 7px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 50%;
+  filter: blur(2px);
+}
+
+/* Ship floating animation — gentle bobbing on water */
+.ship-float .avatar-img {
+  animation: ship-bob 3.2s ease-in-out infinite;
+}
+
+.ship-float .avatar-shadow {
+  animation: ship-shadow 3.2s ease-in-out infinite;
+}
+
+@keyframes ship-bob {
+  0%, 100% { transform: translateY(0px) rotate(-1deg); }
+  25%       { transform: translateY(-7px) rotate(1.5deg); }
+  50%       { transform: translateY(-12px) rotate(-0.5deg); }
+  75%       { transform: translateY(-5px) rotate(1deg); }
+}
+
+@keyframes ship-shadow {
+  0%, 100% { transform: translateX(-50%) scale(1);    opacity: 0.35; }
+  50%       { transform: translateX(-50%) scale(0.65); opacity: 0.12; }
+}
+
+/* ============ Responsive ============ */
+@media (max-width: 900px) {
+  .dashboard-layout {
+    flex-direction: column-reverse;
+    padding: 68px 12px 10px 12px;
+    height: auto;
+    overflow: auto;
+  }
+
+  .dashboard-sidebar {
+    width: 100%;
+    padding: 16px;
+  }
+
+  .dashboard-map-area {
+    min-height: 55vh;
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard-sidebar {
+    width: 100%;
+  }
+
+  .island-hover-card {
+    width: 180px;
+  }
+
+  .island-hover-card__img-wrap {
+    height: 85px;
+  }
+}

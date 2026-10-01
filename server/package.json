@@ -1,0 +1,26 @@
+{
+  "name": "treasure-hunt-server",
+  "version": "1.0.0",
+  "description": "Backend API for Technical Treasure Hunt",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node --watch server.js",
+    "start": "node server.js",
+    "seed": "node seed/seedQuestions.js",
+    "seed:preview": "node seed/seedQuestions.js --preview",
+    "codes:issue": "node seed/issueAccessCodes.js",
+    "db:check": "node scripts/checkDatabase.js",
+    "test": "node --test --experimental-test-isolation=none tests/*.test.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "exceljs": "^4.4.0",
+    "express": "^4.21.2",
+    "express-rate-limit": "^8.3.2",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^8.12.1",
+    "node-cache": "^5.1.2"
+  }
+}

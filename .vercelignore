@@ -1,0 +1,15 @@
+.git
+.private
+.private/**
+**/.private/**
+.env
+.env.*
+**/.env
+**/.env.*
+**/node_modules
+client/dist
+server/tests
+**/*.log
+**/coverage
+.deployment
+server/.organizer-access-codes.json
