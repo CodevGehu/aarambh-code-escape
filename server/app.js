@@ -7,6 +7,10 @@ const missingConfiguration = () => REQUIRED_ENV.filter(key => !process.env[key])
 
 const app = express();
 app.set('trust proxy', 1);
+app.use((req, res, next) => {
+  req.received_at = new Date();
+  next();
+});
 app.use(helmet());
 app.use(cors({
   origin(origin, callback) {
@@ -51,6 +55,7 @@ app.use('/api', async (req, res, next) => {
   }
 });
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/integrations/aarambh', require('./routes/aarambhIntegration').router);
 app.use('/api/questions', require('./routes/questions'));
 app.use('/api/progress', require('./routes/progress'));
 app.use('/api/leaderboard', require('./routes/leaderboard'));

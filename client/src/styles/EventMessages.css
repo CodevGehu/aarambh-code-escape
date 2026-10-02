@@ -1,0 +1,22 @@
+.event-announcement {
+  width:min(580px,calc(100% - 40px)); max-height:calc(100dvh - 48px); overflow:auto;
+  margin:auto; padding:32px; border:3px solid var(--ink); border-radius:8px;
+  background:var(--paper); color:var(--ink); box-shadow:8px 8px 0 var(--ink);
+}
+.event-announcement::backdrop { background:#111a; }
+.event-announcement-symbol {
+  width:72px; height:72px; display:grid; place-items:center; border:2px solid var(--ink);
+  background:var(--lime); box-shadow:4px 4px 0 var(--ink); margin-bottom:24px; border-radius:8px;
+}
+.event-announcement-ended .event-announcement-symbol { background:var(--pink); }
+.event-announcement-team { font-weight:700; color:var(--purple); overflow-wrap:anywhere; margin-bottom:8px; }
+.event-announcement h2 { font-size:clamp(2rem,6vw,3rem); margin-bottom:18px; }
+.event-announcement-note { margin:16px 0 24px; font-size:.9rem; color:#5b5652; }
+.recovery-page { min-height:100dvh; display:grid; place-items:center; padding:32px 24px; }
+.recovery-card { width:min(780px,100%); background:white; border:3px solid var(--ink); border-radius:8px; box-shadow:8px 8px 0 var(--ink); padding:clamp(24px,5vw,56px); }
+.recovery-brand { display:flex; align-items:center; gap:10px; font-weight:700; text-decoration:none; }
+.recovery-code { color:var(--purple); font-size:clamp(5rem,15vw,9rem); line-height:1; font-weight:800; letter-spacing:-.06em; margin:40px 0 16px; }
+.recovery-card h1 { font-size:clamp(2rem,5vw,3.2rem); }
+.recovery-description { max-width:60ch; margin:20px 0 28px; }
+.recovery-card .small { margin-top:28px; }
+@media(max-width:500px) { .event-announcement { padding:24px; } .event-announcement .btn { width:100%; } }

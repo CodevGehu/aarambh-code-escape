@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
@@ -6,11 +6,16 @@ import Dashboard from './pages/Dashboard';
 import QuestionPage from './pages/QuestionPage';
 import Leaderboard from './pages/Leaderboard';
 import AdminPage from './pages/AdminPage';
+import ErrorPage from './pages/ErrorPage';
+import EventAnnouncement from './components/EventAnnouncement';
+import AppErrorBoundary from './components/AppErrorBoundary';
+import './styles/EventMessages.css';
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <AppErrorBoundary><BrowserRouter>
       <AuthProvider>
+        <EventAnnouncement />
         <Routes>
           <Route path="/" element={<LoginPage />} />
           <Route
@@ -36,9 +41,9 @@ export default function App() {
               via optional chaining (team?.team_name). */}
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/admin" element={<AdminPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<ErrorPage />} />
         </Routes>
       </AuthProvider>
-    </BrowserRouter>
+    </BrowserRouter></AppErrorBoundary>
   );
 }

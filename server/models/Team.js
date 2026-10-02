@@ -32,6 +32,17 @@ const teamSchema = new mongoose.Schema({
   },
   access_code_hash: { type: String, select: false },
   active_session_id: { type: String, default: null, select: false },
+  aarambh_registration_id: { type: String },
+  access_enabled: { type: Boolean, default: true },
+  event_run_id: { type: String, default: null },
+  event_open: { type: Boolean, default: false },
+  progress_version: { type: Number, default: 0 },
+  round_started_at: { type: Date, default: null },
+  carry_ms: { type: Number, default: 0 },
+  overtime_continued_at: { type: Date, default: null },
+  score_reached_at: { type: Date, default: null },
+  outcomes: { type: [mongoose.Schema.Types.Mixed], default: [] },
+  event_history: { type: [mongoose.Schema.Types.Mixed], default: [] },
   total_points: {
     type: Number,
     default: 0
@@ -54,4 +65,6 @@ const teamSchema = new mongoose.Schema({
   timestamps: true
 });
 
+teamSchema.index({ aarambh_registration_id: 1 }, { unique: true,
+  partialFilterExpression: { aarambh_registration_id: { $type: 'string' } } });
 module.exports = mongoose.model('Team', teamSchema);

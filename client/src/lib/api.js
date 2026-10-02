@@ -6,8 +6,8 @@ const api = axios.create({
 });
 
 api.interceptors.request.use(config => {
-  const isAdminRequest = /^\/(admin(?:\/|$)|quiz\/(start|end|reset)(?:\/|$)|export(?:\/|$)|leaderboard(?:\/|$))/.test(config.url || '');
-  const token = isAdminRequest ? sessionStorage.getItem('adminToken') : sessionStorage.getItem('teamToken');
+  const isAdminRequest = /^\/(admin(?:\/|$)|quiz\/(start|end|reset|config)(?:\/|$)|export(?:\/|$))/.test(config.url || '');
+  const token = isAdminRequest ? sessionStorage.getItem('adminToken') : (sessionStorage.getItem('teamToken') || sessionStorage.getItem('adminToken'));
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });

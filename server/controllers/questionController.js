@@ -3,6 +3,7 @@ const MappedQuestion = require('../models/MappedQuestion');
 const Team = require('../models/Team');
 const QuizState = require('../models/QuizState');
 const { prepareTeamQuestionSets } = require('../services/questionSets');
+const { getEventState, getRoundState } = require('../services/eventRules');
 
 // GET /api/questions/:level
 //
@@ -22,13 +23,13 @@ const getQuestion = async (req, res) => {
   try {
     // 1. Gate: quiz must be active
     const state = await QuizState.findOne({ key: 'global' });
-    if (!state || state.status !== 'active') {
-      return res.status(403).json({ error: 'Quiz is currently inactive.' });
+    if (getEventState(state).status !== 'active') {
+      return res.status(403).json({ error: 'Quiz is currently inactive or has ended.', code: 'EVENT_ENDED' });
     }
 
     // 2. Parse and validate level
-    const levelNum = parseInt(req.params.level);
-    if (isNaN(levelNum) || levelNum < 1 || levelNum > 5) {
+    const levelNum = Number(req.params.level);
+    if (!Number.isInteger(levelNum) || levelNum < 1 || levelNum > 5) {
       return res.status(400).json({ error: 'Invalid level. Must be 1–5.' });
     }
 
@@ -96,11 +97,13 @@ const getQuestion = async (req, res) => {
 
     // 8. NEVER return correct_answer — it only lives on the server
     res.json({
+      event: getEventState(state),
+      round: getRoundState(team, state),
       question: {
         _id: question._id,
         level: question.level,
         question_text: question.question_text,
-        points: question.points
+        points: getEventState(state).config.round_points[levelNum - 1]
       }
     });
 
@@ -108,7 +111,7 @@ const getQuestion = async (req, res) => {
     if (error.code === 'QUESTION_SET_CONFIGURATION') {
       return res.status(503).json({ error: 'Question sets need organizer attention before play can continue.' });
     }
-    console.error('GetQuestion error:', error);
+    console.error('[QUESTION] Retrieval failed.');
     res.status(500).json({ error: 'Server error fetching question.' });
   }
 };

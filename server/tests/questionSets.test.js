@@ -287,8 +287,9 @@ function startQuizFixture(initial = null) {
           if (!state) state = { key: 'global', status: 'not_started' };
           return structuredClone(state);
         }
-        assert.deepEqual(filter, { key: 'global', status: { $ne: 'active' } });
-        if (!state || state.status === 'active') return null;
+        assert.equal(filter.key, 'global');
+        assert.ok(['not_started', 'starting'].includes(filter.status));
+        if (!state || state.status !== filter.status || (filter.run_id && state.run_id !== filter.run_id)) return null;
         state = { ...state, ...update.$set };
         return structuredClone(state);
       },
@@ -296,6 +297,7 @@ function startQuizFixture(initial = null) {
     },
     'models/Team.js': { async updateMany(filter, update) { calls.teamStart.push({ filter, update }); } },
     'models/MappedQuestion.js': {},
+    'services/activityLog.js': { writeActivity: async () => true, recordObservedTimeouts: async () => {} },
     'services/questionSets.js': { async prepareTeamQuestionSets() {
       calls.preparation++;
       await Promise.resolve();
@@ -323,9 +325,9 @@ test('first start succeeds when question-set preparation creates the initially m
   assert.equal(fixture.state.question_set_assignment_version, 1);
   assert.deepEqual(fixture.state.question_set_assignments, [{ team_id: 'team', set_id: 'L1' }]);
   assert.equal(fixture.calls.teamStart.length, 1);
-  assert.deepEqual(fixture.calls.teamStart[0].filter, { start_time: null });
-  assert.equal(fixture.calls.teamStart[0].update.$set.start_time, res.body.started_at);
-  assert.equal(fixture.state.started_at, res.body.started_at);
+  assert.deepEqual(fixture.calls.teamStart[0].filter, { ...require('../services/registrationPolicy').rosterFilter(), event_run_id: { $ne: fixture.state.run_id } });
+  assert.deepEqual(fixture.calls.teamStart[0].update.$set.start_time, res.body.started_at);
+  assert.deepEqual(fixture.state.started_at, res.body.started_at);
 });
 
 test('overlapping quiz starts yield one start and one conflict without resetting the shared timer', async () => {
@@ -335,8 +337,8 @@ test('overlapping quiz starts yield one start and one conflict without resetting
   assert.deepEqual(responses.map(res => res.statusCode).sort(), [200, 409]);
   const winner = responses.find(res => res.statusCode === 200);
   assert.equal(fixture.calls.teamStart.length, 1);
-  assert.equal(fixture.calls.teamStart[0].update.$set.start_time, winner.body.started_at);
-  assert.equal(fixture.state.started_at, winner.body.started_at);
+  assert.deepEqual(fixture.calls.teamStart[0].update.$set.start_time, winner.body.started_at);
+  assert.deepEqual(fixture.state.started_at, winner.body.started_at);
 });
 
 test('already active quiz rejects a duplicate start before allocating or updating teams', async () => {
@@ -358,7 +360,7 @@ function controllerFixture(overrides = {}) {
   const calls = { findQuestion: [], mappings: [] };
   const models = {
     'models/Team.js': { findOne: async filter => { assert.deepEqual(filter, { email: 'leader@example.com' }); return team; } },
-    'models/QuizState.js': { findOne: async () => ({ status: 'active' }) },
+    'models/QuizState.js': { findOne: async () => ({ status: 'active', started_at: new Date() }) },
     'models/Question.js': {
       findOne: async filter => { calls.findQuestion.push(filter); return question; },
       findById: async id => { assert.equal(id, question._id); return question; }
@@ -386,7 +388,10 @@ test('question retrieval selects the authenticated team set and omits answers an
     { $setOnInsert: { team_id: 'team', level: 2, selected_question_id: 'L2-2' } },
     { upsert: true, new: true, setDefaultsOnInsert: true }
   ]);
-  assert.deepEqual(fixture.res.body, { question: { _id: 'L2-2', level: 2, question_text: 'Practice clue', points: 200 } });
+  assert.deepEqual(fixture.res.body.question, { _id: 'L2-2', level: 2, question_text: 'Practice clue', points: 200 });
+  assert.equal(fixture.res.body.event.status, 'active');
+  assert.equal(fixture.res.body.round.level, 2);
+  assert.equal('correct_answer' in fixture.res.body.question, false);
 });
 
 test('refresh uses the existing mapping without assigning another question', async () => {

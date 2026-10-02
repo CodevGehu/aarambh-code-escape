@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { submitProgress } = require('../controllers/progressController');
+const { submitProgress, getState, continueRound, skipRound } = require('../controllers/progressController');
 const { authMiddleware } = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
 
@@ -24,5 +24,8 @@ const submitLimiter = rateLimit({
 // Order matters: authMiddleware runs first → populates req.user.email
 // → submitLimiter uses email as the rate-limit key
 router.post('/submit', authMiddleware, submitLimiter, submitProgress);
+router.get('/state', authMiddleware, getState);
+router.post('/continue', authMiddleware, submitLimiter, continueRound);
+router.post('/skip', authMiddleware, submitLimiter, skipRound);
 
 module.exports = router;

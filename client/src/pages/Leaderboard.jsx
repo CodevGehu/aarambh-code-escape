@@ -1,207 +1,33 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
-import GlassCard from '../components/GlassCard';
 import api from '../lib/api';
-import { Trophy, Clock, ArrowLeft, Crown, Medal, Award, Search } from 'lucide-react';
-
+import { formatClock } from '../lib/gameClock';
+import { ArrowLeft, Trophy } from 'lucide-react';
 export default function Leaderboard() {
-  const [leaderboard, setLeaderboard] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const navigate = useNavigate();
-
-
-
+  const [rows, setRows] = useState([]), [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true), [error, setError] = useState(null), [updated, setUpdated] = useState(null);
+  const { team } = useAuth(); const navigate = useNavigate();
   useEffect(() => {
-    fetchLeaderboard();
-    const interval = setInterval(fetchLeaderboard, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
-
-
-
-  const fetchLeaderboard = async () => {
-    try {
-      const res = await api.get('/leaderboard');
-      setLeaderboard(res.data.leaderboard);
-    } catch (err) {
-      console.error('Error fetching leaderboard:', err);
-    } finally {
-      setLoading(false);
+    let alive = true;
+    async function refresh() {
+      try {
+        const res = await api.get('/leaderboard');
+        if (alive) { setRows(res.data.leaderboard || []); setError(null); setUpdated(new Date()); }
+      } catch { if (alive) setError('Live rankings are temporarily unavailable. Reconnecting…'); }
+      finally { if (alive) setLoading(false); }
     }
-  };
-
-  const formatTime = (ms) => {
-    if (!ms) return '—';
-    const hours = Math.floor(ms / 3600000);
-    const minutes = Math.floor((ms % 3600000) / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    return `${hours}h ${minutes}m ${seconds}s`;
-  };
-
-  const getRankIcon = (rank) => {
-    if (rank === 1) return <Crown size={20} color="#FFD700" />;
-    if (rank === 2) return <Medal size={20} color="#C0C0C0" />;
-    if (rank === 3) return <Medal size={20} color="#CD7F32" />;
-    return <span style={{ fontWeight: '700', color: 'rgba(245,230,200,0.5)' }}>#{rank}</span>;
-  };
-
-  const getRankStyle = (rank) => {
-    if (rank === 1) return { borderColor: 'rgba(255, 215, 0, 0.5)', background: 'rgba(255, 215, 0, 0.06)' };
-    if (rank === 2) return { borderColor: 'rgba(192, 192, 192, 0.4)', background: 'rgba(192, 192, 192, 0.04)' };
-    if (rank === 3) return { borderColor: 'rgba(205, 127, 50, 0.4)', background: 'rgba(205, 127, 50, 0.04)' };
-    return {};
-  };
-
-  const filtered = leaderboard.filter(entry =>
-    (entry.team_name || '').toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  return (
-    <div className="page" id="leaderboard-page">
-      <div className="app-background" />
-      <div className="app-overlay" />
-      <Navbar />
-
-      <div className="page-content" style={{ padding: 'var(--space-2xl) 0 var(--space-3xl)' }}>
-        <div className="container" style={{ maxWidth: '960px' }}>
-          {/* Header */}
-          <div className="animate-fade-in-up" style={{ marginBottom: 'var(--space-xl)' }}>
-            <button
-              className="btn btn-ghost"
-              onClick={() => navigate('/dashboard')}
-              style={{ padding: '6px 12px', fontSize: '0.8rem', marginBottom: 'var(--space-lg)' }}
-              id="btn-back-leaderboard"
-            >
-              <ArrowLeft size={16} /> Back to Map
-            </button>
-            <h1 style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Trophy size={36} />
-              Leaderboard
-            </h1>
-            <p style={{ marginTop: '8px', fontSize: '0.9rem', color: 'rgba(245,230,200,0.5)' }}>
-              Live rankings — updates automatically
-            </p>
-          </div>
-
-          {/* Leaderboard Wrapper — Dark Glass Container */}
-          <div className="animate-fade-in-up delay-100" style={{
-            background: 'rgba(5, 12, 24, 0.55)',
-            backdropFilter: 'blur(24px) saturate(160%)',
-            WebkitBackdropFilter: 'blur(24px) saturate(160%)',
-            border: '1px solid rgba(212, 168, 67, 0.2)',
-            borderRadius: 'var(--radius-xl)',
-            boxShadow: '0 12px 48px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(212, 168, 67, 0.08)',
-            padding: 'var(--space-xl) var(--space-xl) var(--space-2xl)',
-            minHeight: '400px'
-          }}>
-            {/* Search Bar */}
-            <div style={{ marginBottom: 'var(--space-xl)', position: 'relative' }}>
-              <Search size={18} style={{
-                position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)',
-                color: 'rgba(245,230,200,0.35)', pointerEvents: 'none'
-              }} />
-              <input
-                type="text"
-                className="input"
-                placeholder="Search teams..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                id="leaderboard-search"
-                style={{
-                  paddingLeft: '44px',
-                  background: 'rgba(10, 22, 40, 0.5)',
-                  borderColor: 'rgba(212,168,67,0.15)'
-                }}
-              />
-            </div>
-
-            {/* Content */}
-            {loading ? (
-              <div className="flex-center" style={{ minHeight: '30vh' }}>
-                <div className="animate-spin" style={{
-                  width: '48px', height: '48px',
-                  border: '3px solid rgba(212,168,67,0.2)',
-                  borderTopColor: 'var(--color-gold)',
-                  borderRadius: '50%'
-                }} />
-              </div>
-            ) : filtered.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: 'var(--space-3xl) var(--space-lg)' }}>
-                <Trophy size={48} color="rgba(245,230,200,0.2)" style={{ marginBottom: 'var(--space-md)' }} />
-                <h3 style={{ marginBottom: 'var(--space-sm)', fontSize: '1.1rem' }}>
-                  {searchQuery ? 'No teams found' : 'No Results Yet'}
-                </h3>
-                <p style={{ fontSize: '0.85rem' }}>
-                  {searchQuery ? 'Try a different search term' : 'The hunt hasn\'t started yet!'}
-                </p>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
-                {filtered.map((entry) => (
-                  <div
-                    key={entry.team_name || entry.rank}
-                    style={{
-                      padding: 'var(--space-md) var(--space-lg)',
-                      display: 'grid',
-                      gridTemplateColumns: '44px 1fr auto auto',
-                      alignItems: 'center',
-                      gap: 'var(--space-lg)',
-                      background: entry.rank <= 3 ? getRankStyle(entry.rank).background : 'rgba(245, 230, 200, 0.02)',
-                      border: `1px solid ${entry.rank <= 3 ? getRankStyle(entry.rank).borderColor : 'rgba(245, 230, 200, 0.06)'}`,
-                      borderRadius: 'var(--radius-md)',
-                      transition: 'all 0.2s ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(212, 168, 67, 0.06)';
-                      e.currentTarget.style.borderColor = 'rgba(212, 168, 67, 0.25)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = entry.rank <= 3 ? getRankStyle(entry.rank).background : 'rgba(245, 230, 200, 0.02)';
-                      e.currentTarget.style.borderColor = entry.rank <= 3 ? getRankStyle(entry.rank).borderColor : 'rgba(245, 230, 200, 0.06)';
-                    }}
-                    id={`leaderboard-row-${entry.rank}`}
-                  >
-                    <div className="flex-center">{getRankIcon(entry.rank)}</div>
-
-                    <div>
-                      <p style={{ fontWeight: '700', fontSize: '1rem', color: 'var(--color-parchment)', marginBottom: '1px' }}>
-                        {entry.team_name}
-                      </p>
-                      <p style={{ fontSize: '0.75rem', color: 'rgba(245,230,200,0.4)' }}>
-                        {entry.completed ? '✅ Completed' : `Level ${entry.current_level}`}
-                      </p>
-                    </div>
-
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{
-                        display: 'flex', alignItems: 'center', gap: '5px',
-                        color: 'var(--color-gold)', fontWeight: '700', fontSize: '1.05rem'
-                      }}>
-                        <Award size={15} />
-                        {entry.total_points}
-                      </div>
-                      <p style={{ fontSize: '0.7rem', color: 'rgba(245,230,200,0.35)' }}>points</p>
-                    </div>
-
-                    <div style={{ textAlign: 'right', minWidth: '100px' }}>
-                      <div style={{
-                        display: 'flex', alignItems: 'center', gap: '5px',
-                        color: 'rgba(245,230,200,0.6)', fontSize: '0.85rem', justifyContent: 'flex-end'
-                      }}>
-                        <Clock size={13} />
-                        {formatTime(entry.time_taken)}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+    refresh(); const id = setInterval(refresh,5000);
+    return () => { alive = false; clearInterval(id); };
+  }, []);
+  const filtered = rows.filter(row => row.team_name.toLowerCase().includes(search.toLowerCase()));
+  return <div className="page"><Navbar /><main className="container page-content">
+    <button className="btn btn-ghost" onClick={() => navigate(team ? '/dashboard' : '/')}><ArrowLeft size={17} />{team ? 'Back to rooms' : 'Team login'}</button>
+    <div className="page-heading row between" style={{ marginTop:26 }}><div><h1>Live rankings.</h1><p className="muted">Points first. Time to reach that score breaks ties.</p></div><span className="badge badge-lime"><Trophy size={17} />{rows.length} teams</span></div>
+    {error && <p role="alert" className="notice notice-error" style={{ marginBottom:22 }}>{error}</p>}
+    <label htmlFor="leaderboard-search" style={{ marginBottom:22 }}>Find your team<input className="input" id="leaderboard-search" placeholder="Team name" value={search} onChange={e => setSearch(e.target.value)} style={{ marginTop:8, maxWidth:460 }} /></label>
+    <div className="table-wrap"><table><thead><tr><th scope="col">Rank</th><th scope="col">Team</th><th scope="col">Progress</th><th scope="col">Points</th><th scope="col">Score reached</th></tr></thead><tbody>{filtered.map(row => <tr key={row.team_id || row.team_name} className={row.rank === 1 ? 'rank-first' : ''}><td><strong>#{row.rank}</strong></td><td><strong>{row.team_name}</strong></td><td>{row.completed ? 'Path complete' : `Round ${Math.max(1,row.current_level)}`}</td><td><strong>{row.total_points}</strong></td><td>{row.time_taken == null ? '—' : formatClock(row.time_taken)}</td></tr>)}</tbody></table>{loading ? <p className="empty-state" role="status">Loading rankings…</p> : !filtered.length && <p className="empty-state">{search ? 'No matching teams. Try another name.' : 'Rankings appear when the event starts.'}</p>}</div>
+    <p className="muted small" style={{ marginTop:18 }}>Updates every 5 seconds.{updated && ` Last updated ${updated.toLocaleTimeString('en-IN', { timeZone:'Asia/Calcutta' })}.`}</p>
+  </main></div>;
 }

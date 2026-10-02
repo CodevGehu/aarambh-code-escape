@@ -40,7 +40,14 @@ async function fixture(options = {}) {
     access_code_hash: await hashAccessCode(code), active_session_id: null, ...options.team
   };
   const state = options.state || { status: 'active', started_at: new Date('2026-10-01T04:30:00Z') };
-  const match = filter => Object.entries(filter).every(([key, value]) => team[key] === value);
+  const match = filter => Object.entries(filter).every(([key, value]) => {
+    if (value && typeof value === 'object') {
+      if ('$ne' in value) return team[key] !== value.$ne;
+      if ('$type' in value) return typeof team[key] === value.$type;
+      if ('$exists' in value) return (team[key] !== undefined) === value.$exists;
+    }
+    return team[key] === value;
+  });
   const Team = {
     findOne(filter) {
       if (options.dbError) throw new Error('Database unavailable');
@@ -60,7 +67,7 @@ async function fixture(options = {}) {
       return { ...team };
     }
   };
-  const mocks = { 'models/Team.js': Team, 'models/QuizState.js': { findOne: async () => state } };
+  const mocks = { 'models/Team.js': Team, 'models/QuizState.js': { findOne: async () => state }, 'services/activityLog.js': { writeActivity: async () => true } };
   const controller = loadWithMocks('controllers/authController.js', mocks);
   const middleware = loadWithMocks('middleware/auth.js', { 'models/Team.js': Team }).authMiddleware;
   const authenticate = async token => {
@@ -169,6 +176,62 @@ test('rotation during login refuses to create a session under the old code', asy
   const res = await f.login();
   assert.equal(res.statusCode, 401);
   assert.equal(res.body.token, undefined);
+});
+
+test('revoked registrations cannot sign in with their former valid access code', async t => {
+  withSecret(t);
+  const f = await fixture({ team: { access_enabled: false } });
+  const res = await f.login();
+  assert.equal(res.statusCode, 401);
+  assert.equal(res.body.token, undefined);
+  assert.equal(f.team.active_session_id, null);
+  assert.equal(f.team.current_level, 0);
+});
+
+test('revocation denies an existing session even before the stored session is cleared', async t => {
+  withSecret(t);
+  const f = await fixture();
+  const login = await f.login();
+  assert.equal(login.statusCode, 200);
+  f.team.access_enabled = false;
+  const authenticated = await f.authenticate(login.body.token);
+  assert.equal(authenticated.passed, false);
+  assert.equal(authenticated.res.statusCode, 401);
+});
+
+test('login initializes a newly paid team using the shared event run and preserves an initialized round', async t => {
+  withSecret(t);
+  const f = await fixture({
+    team: { event_run_id: null, round_started_at: null },
+    state: { status: 'active', run_id: 'shared-run', started_at: new Date('2026-10-01T04:30:00Z') }
+  });
+  assert.equal((await f.login()).statusCode, 200);
+  assert.equal(f.team.event_run_id, 'shared-run');
+  assert.equal(f.team.event_open, true);
+  assert.equal(f.team.round_started_at, f.state.started_at);
+  f.team.current_level = 3;
+  f.team.round_started_at = new Date('2026-10-01T05:00:00Z');
+  const roundStart = f.team.round_started_at;
+  assert.equal((await f.login()).statusCode, 200);
+  assert.equal(f.team.current_level, 3);
+  assert.equal(f.team.round_started_at, roundStart);
+});
+
+test('paid-registration enforcement rejects legacy seed credentials and sessions', async t => {
+  withSecret(t);
+  const previous = process.env.AARAMBH_REGISTRATION_REQUIRED;
+  t.after(() => { if (previous === undefined) delete process.env.AARAMBH_REGISTRATION_REQUIRED; else process.env.AARAMBH_REGISTRATION_REQUIRED = previous; });
+  delete process.env.AARAMBH_REGISTRATION_REQUIRED;
+  const legacy = await fixture();
+  const oldLogin = await legacy.login();
+  assert.equal(oldLogin.statusCode, 200);
+  process.env.AARAMBH_REGISTRATION_REQUIRED = 'true';
+  assert.equal((await legacy.login()).statusCode, 401);
+  assert.equal((await legacy.authenticate(oldLogin.body.token)).res.statusCode, 401);
+  const paid = await fixture({ team: { aarambh_registration_id: '507f1f77bcf86cd799439012' } });
+  const paidLogin = await paid.login();
+  assert.equal(paidLogin.statusCode, 200);
+  assert.equal((await paid.authenticate(paidLogin.body.token)).passed, true);
 });
 
 test('team middleware rejects admin tokens, wrong audience, expired tokens, and absent configuration', async t => {

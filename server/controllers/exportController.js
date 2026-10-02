@@ -1,42 +1,40 @@
 const ExcelJS = require('exceljs');
 const Team = require('../models/Team');
+const { compareTeams, progressTime } = require('../services/rankings');
+const { rosterFilter } = require('../services/registrationPolicy');
 
 // GET /api/export/excel
 const exportExcel = async (req, res) => {
   try {
     const teams = await Team.find({
+      ...rosterFilter(),
       start_time: { $ne: null }
     });
+    teams.sort(compareTeams);
 
     // Build leaderboard data with same logic as leaderboard endpoint
     const data = teams.map((team) => {
-      let timeTaken = null;
+      let timeTaken = progressTime(team);
       let timeFormatted = 'In Progress';
       let lastSubmittedStr = 'N/A';
 
       if (team.start_time) {
         const isCompleted = team.current_level >= 6;
 
-        if (isCompleted && team.end_time) {
-          // Completed teams: exact duration from start to when they finished level 5
-          timeTaken = team.end_time.getTime() - team.start_time.getTime();
-        } else {
-          // In-progress teams: live snapshot at export time
-          timeTaken = Date.now() - team.start_time.getTime();
+        if (timeTaken !== null) {
+          const hours = Math.floor(timeTaken / 3600000);
+          const minutes = Math.floor((timeTaken % 3600000) / 60000);
+          const seconds = Math.floor((timeTaken % 60000) / 1000);
+          timeFormatted = `${hours}h ${minutes}m ${seconds}s`;
         }
-
-        const hours = Math.floor(timeTaken / 3600000);
-        const minutes = Math.floor((timeTaken % 3600000) / 60000);
-        const seconds = Math.floor((timeTaken % 60000) / 1000);
-        timeFormatted = `${hours}h ${minutes}m ${seconds}s`;
 
         // "Last Submitted at" — for completed teams use end_time (the exact moment
         // they answered the final question). For in-progress teams, updatedAt is the
         // best proxy (it updates on each answer save).
         if (isCompleted && team.end_time) {
           lastSubmittedStr = new Date(team.end_time).toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        } else if (team.current_level > 1 && team.updatedAt) {
-          lastSubmittedStr = new Date(team.updatedAt).toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        } else if (team.score_reached_at) {
+          lastSubmittedStr = new Date(team.score_reached_at).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }
       }
 
@@ -52,18 +50,9 @@ const exportExcel = async (req, res) => {
       };
     });
 
-    // Sort same way as leaderboard
-    data.sort((a, b) => {
-      if (b.total_points !== a.total_points) return b.total_points - a.total_points;
-      if (a.time_taken && b.time_taken) return a.time_taken - b.time_taken;
-      if (a.time_taken && !b.time_taken) return -1;
-      if (!a.time_taken && b.time_taken) return 1;
-      return 0;
-    });
-
     // Create workbook
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'Treasure Hunt Platform';
+    workbook.creator = 'Aarambh Code Escape';
     workbook.created = new Date();
 
     const worksheet = workbook.addWorksheet('Leaderboard Results');

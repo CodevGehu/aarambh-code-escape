@@ -3,6 +3,7 @@ const Question = require('../models/Question');
 const Team = require('../models/Team');
 const MappedQuestion = require('../models/MappedQuestion');
 const QuizState = require('../models/QuizState');
+const { rosterFilter } = require('./registrationPolicy');
 
 function configurationError(message) {
   return Object.assign(new Error(message), { code: 'QUESTION_SET_CONFIGURATION' });
@@ -59,7 +60,7 @@ function planSetAssignments(teams, setIds, pickIndex = randomInt) {
 async function prepareTeamQuestionSets() {
   const questions = await Question.find({}).select('_id set_id level').lean();
   const setIds = getQuestionSetIds(questions);
-  const teams = await Team.find({}).select('_id question_set_id').lean();
+  const teams = await Team.find(rosterFilter()).select('_id question_set_id').lean();
   const unassigned = teams.filter(team => !team.question_set_id);
   if (!unassigned.length) {
     planSetAssignments(teams, setIds); // Validate existing assignments as well.

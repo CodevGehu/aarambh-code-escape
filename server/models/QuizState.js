@@ -4,11 +4,16 @@ const quizStateSchema = new mongoose.Schema({
   key: { type: String, default: 'global', unique: true },
   status: {
     type: String,
-    enum: ['not_started', 'active', 'ended'],
+    enum: ['not_started', 'starting', 'resetting', 'active', 'ended'],
     default: 'not_started'
   },
   started_at: { type: Date, default: null },
   ended_at: { type: Date, default: null },
+  deadline: { type: Date, default: null },
+  run_id: { type: String, default: null },
+  config: { type: mongoose.Schema.Types.Mixed, default: () => require('../services/eventRules').defaultConfig() },
+  frozen_config: { type: mongoose.Schema.Types.Mixed, default: null },
+  config_version: { type: Number, default: 0 },
   // One committed allocation plan shared by every backend worker.
   question_set_assignments: {
     type: [new mongoose.Schema({

@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const Team = require('../models/Team');
+const { isRosterTeam } = require('../services/registrationPolicy');
 
 const authMiddleware = async (req, res, next) => {
   const secret = process.env.JWT_TEAM_SECRET;
@@ -17,7 +18,9 @@ const authMiddleware = async (req, res, next) => {
   }
   try {
     const team = await Team.findOne({ _id: claims.sub, active_session_id: claims.sid });
-    if (!team) return res.status(401).json({ error: 'Your team session has ended or was opened on another device.' });
+    if (!isRosterTeam(team)) {
+      return res.status(401).json({ error: 'Your team session has ended or access is no longer active. Check your Aarambh registration.' });
+    }
     req.user = { id: String(team._id), email: team.email, sessionId: claims.sid };
     req.team = team;
     return next();
