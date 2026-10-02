@@ -2,9 +2,9 @@
 
 Implementation update (2 October 2026): shared two-hour cutoff, accepted 10/15/20/25/30-minute caps, time carry, overtime/skip scoring, leader-only access, Aarambh redesign, activity dashboard, start/end notices, custom error screens, and the verified-registration bridge are implemented in this separate deployment. The sections below preserve the original rule discussion; numeric rehearsal defaults were accepted by the organizer. Pause/resume, timing compensation, and manual score adjustments remain future options, not current controls. See README.md for current setup and the portal's docs/code-escape-integration.md for payment-code delivery. Final twisted question sets will replace the temporary content when supplied.
 
-Status: implementation has begun with question-set scaffolding. Confirmed: everyone starts the event together; teams advance immediately when they finish a round; unused full-score time carries to the next round; overtime decreases the available round reward; external browsing is allowed and the seed questions are retained; the event will have two or three question sets. The user intends twisted, discovery-based questions that resist straightforward AI answers. The user favors the previous leader-only, single-device setup but is still considering member access. Numeric settings remain proposals. Database contents have not been changed.
+The remaining sections are historical planning notes. Current behavior and accepted numeric settings are described in the implementation update above and README.md. The final twisted questions are still awaiting organizer input.
 
-## Implemented question-set scaffolding
+## Initial question-set scaffolding (historical)
 
 - Original L1 questions retained; two easy temporary paths, L2 and L3, added in `server/seed/placeholderQuestions.js`, for 15 questions total.
 - Persistent team set assignment, balanced distribution, complete-set validation before quiz start, and a shared versioned allocation plan across backend workers.

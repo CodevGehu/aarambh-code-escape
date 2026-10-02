@@ -61,10 +61,12 @@ npm run build
 npm run db:check --prefix server
 ```
 
-Tests run offline. The final database diagnostic uses the private local configuration and checks connectivity without displaying credentials.
+The default tests run offline. To include the optional MongoDB transaction tests, set `AARAMBH_TEST_MEMORY_SERVER` to a local `mongodb-memory-server` package path and optionally `AARAMBH_TEST_MONGOD` to a local MongoDB executable. These tests create an isolated local replica set and never read the production connection string. The final database diagnostic uses the private local configuration and checks connectivity without displaying credentials.
 
 ## Future domain and updates
 
 Keep the two projects separate: the Aarambh portal on the root domain and this app on a subdomain such as `escape.example.com`. Add that subdomain to this Vercel project and use Vercel's DNS instructions. Then update Aarambh's `CODE_ESCAPE_URL` and redeploy the portal. The admin page becomes `https://escape.example.com/admin`.
 
 Each project can be updated independently from its own source and deployed to the same production alias. A path such as `example.com/escape` also requires proxy rewrites, a Vite asset base, and a router basename; it is a different hosting configuration from a subdomain. Domain changes do not reset the database, codes, timers, or results.
+
+Current production app: [Code Escape](https://aarambh-code-escape-six.vercel.app), with [organizer access](https://aarambh-code-escape-six.vercel.app/admin). Source branch: `codex/aarambh-deployment` in the private `CodevGehu/aarambh-code-escape` repository. The initial release used an authenticated Vercel CLI deployment. For automatic deployments on GitHub pushes, connect the new Vercel account to GitHub and import this repository into the existing project.
