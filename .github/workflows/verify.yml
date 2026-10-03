@@ -1,0 +1,30 @@
+name: Verify Code Escape
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            server/package-lock.json
+            client/package-lock.json
+      - run: npm ci --prefix server
+      - run: npm ci --prefix client
+      - name: Game rules, authentication and transfer tests
+        run: npm test --prefix server
+      - name: Event notice tests
+        run: node --test client/tests/eventNotice.test.js
+      - name: Production build
+        run: npm run build

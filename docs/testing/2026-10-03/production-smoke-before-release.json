@@ -1,0 +1,68 @@
+{
+  "target": "https://aarambh-code-escape.vercel.app",
+  "checkedAt": "2026-10-03T16:16:42.848Z",
+  "readOnly": true,
+  "noProductionCredentialsUsed": true,
+  "results": [
+    {
+      "route": "/",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "route": "/admin",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "route": "/api/health",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "route": "/api/quiz/status",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "route": "/api/auth/me",
+      "status": 401,
+      "passed": true
+    },
+    {
+      "route": "/api/questions/1",
+      "status": 401,
+      "passed": true
+    },
+    {
+      "route": "/api/progress/state",
+      "status": 401,
+      "passed": true
+    },
+    {
+      "route": "/api/admin/teams",
+      "status": 401,
+      "passed": true
+    },
+    {
+      "route": "/api/admin/logs",
+      "status": 401,
+      "passed": true
+    },
+    {
+      "route": "/api/export/excel",
+      "status": 401,
+      "passed": true
+    },
+    {
+      "route": "/api/quiz/config",
+      "status": 401,
+      "passed": true
+    },
+    {
+      "route": "/api/not-an-endpoint",
+      "status": 404,
+      "passed": true
+    }
+  ]
+}
