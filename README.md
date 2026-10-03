@@ -57,6 +57,6 @@ Multiple complete question paths are supported, with a balanced assignment that 
 
 The game is at [aarambh-code-escape.vercel.app](https://aarambh-code-escape.vercel.app); [organizer access](https://aarambh-code-escape.vercel.app/admin) is restricted. The event portal is at [codegehu-eight.vercel.app](https://codegehu-eight.vercel.app). These are separate deployments and can later use a main domain and an event subdomain without resetting registrations or progress.
 
-The active source is the private `CodevGehu/aarambh-code-escape` repository on `codex/aarambh-deployment`. In the local Treasure Hunt folder, use `.deployment/aarambh-code-escape` for this app; the parent folder contains the earlier hunt.
+The active source is the private `CodevGehu/aarambh-code-escape` repository on `main`, the single branch used for production releases. Earlier working branches are retained for history. In the local Treasure Hunt folder, use `.deployment/aarambh-code-escape` for this app; the parent folder contains the earlier hunt.
 
 For maintainers, install dependencies in `server` and `client`, create the private server configuration from `server/.env.example`, and use `npm run server` and `npm run client` locally. `npm test` and `npm run build` verify the project. Hosting uses the repository root on Vercel. Keep credentials private, keep rehearsal data separate, and use the seed guide only when intentionally preparing an isolated database; deploying a website update does not require seeding production.
