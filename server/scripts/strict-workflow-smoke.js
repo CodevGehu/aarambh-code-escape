@@ -7,8 +7,7 @@ async function run() {
   for (const key of Object.keys(process.env)) {
     if (/^(MONGODB_URI|JWT_|ADMIN_PASSWORD|AARAMBH_INTEGRATION_SECRET|SMTP_|GMAIL_|CLOUDINARY_)/.test(key)) delete process.env[key];
   }
-  const memoryModule = process.env.AARAMBH_TEST_MEMORY_SERVER;
-  if (!memoryModule) throw new Error('Set AARAMBH_TEST_MEMORY_SERVER to the local mongodb-memory-server package.');
+  const memoryModule = process.env.AARAMBH_TEST_MEMORY_SERVER || require.resolve('mongodb-memory-server');
   const { MongoMemoryReplSet } = require(memoryModule);
   const mongoose = require('mongoose');
   const replica = await MongoMemoryReplSet.create({ replSet: { count: 1, ip: '127.0.0.1' },

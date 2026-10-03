@@ -14,7 +14,9 @@
   },
   "overrides": {
     "qs": "^6.16.0",
-    "exceljs": { "uuid": "11.1.1" }
+    "exceljs": {
+      "uuid": "11.1.1"
+    }
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -26,5 +28,8 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.12.1",
     "node-cache": "^5.1.2"
+  },
+  "devDependencies": {
+    "mongodb-memory-server": "^10.4.0"
   }
 }
