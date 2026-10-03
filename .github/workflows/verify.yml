@@ -22,6 +22,10 @@ jobs:
             client/package-lock.json
       - run: npm ci --prefix server
       - run: npm ci --prefix client
+      - name: Runtime dependency security audit
+        run: npm audit --prefix server --omit=dev --audit-level=high
+      - name: Client dependency security audit
+        run: npm audit --prefix client --audit-level=high
       - name: Game rules, authentication and transfer tests
         run: npm test --prefix server
       - name: Event notice tests

@@ -1,0 +1,9 @@
+{
+  "checkedAt": "2026-10-03T20:07:09.727Z",
+  "target": "ephemeral-loopback-replica",
+  "assertions": 88,
+  "result": "passed",
+  "productionWrites": 0,
+  "emailsSent": 0,
+  "excelExportRows": 1
+}
