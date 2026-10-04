@@ -50,6 +50,6 @@ jobs:
             interactive-workflow-report.json
           if-no-files-found: ignore
       - name: Event notice tests
-        run: node --test client/tests/eventNotice.test.js
+        run: node --test client/tests/eventNotice.test.js client/tests/packingImport.test.js
       - name: Production build
         run: npm run build

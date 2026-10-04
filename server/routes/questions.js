@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getQuestion, discoverQuestion } = require('../controllers/questionController');
+const { getQuestion, discoverQuestion, downloadQuestionTool } = require('../controllers/questionController');
 const { authMiddleware } = require('../middleware/auth');
 
 // GET /api/questions/:level
@@ -8,5 +8,6 @@ const { authMiddleware } = require('../middleware/auth');
 // This prevents IDOR attacks where one team could request questions on behalf of another.
 router.get('/:level', authMiddleware, getQuestion);
 router.post('/:questionId/discover', authMiddleware, discoverQuestion);
+router.get('/:questionId/tool', authMiddleware, downloadQuestionTool);
 
 module.exports = router;

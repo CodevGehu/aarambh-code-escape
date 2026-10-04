@@ -13,3 +13,4 @@ server/tests
 **/coverage
 .deployment
 server/.organizer-access-codes.json
+**/__pycache__/**

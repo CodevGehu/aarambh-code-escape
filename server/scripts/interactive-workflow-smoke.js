@@ -59,6 +59,15 @@ async function run() {
       equal(response.status, expected, `${method} ${route}`);
       return response.json();
     }
+    async function download(route, token, body) {
+      const response = await fetch(base + route, { method: body ? 'POST' : 'GET',
+        headers: { Authorization: `Bearer ${token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+        ...(body ? { body: JSON.stringify(body) } : {}) });
+      equal(response.status, 200, 'Authorized packing tool download');
+      equal(response.headers.get('content-type'), 'application/zip');
+      const bytes = Buffer.from(await response.arrayBuffer());
+      equal(bytes.equals(fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'polygon-packer', 'kit.zip'))), true);
+    }
     await request('/api/admin/puzzles', 401);
     const organizer = await request('/api/admin/login', 200, { method: 'POST', body: { username: 'admin', password: process.env.ADMIN_PASSWORD } });
     const preview = await request('/api/admin/puzzles', 200, { token: organizer.token });
@@ -68,6 +77,11 @@ async function run() {
       const question = { ...puzzleQuestions.find(q => `preview-${q.set_id}-${q.level}` === publicQuestion._id), _id: publicQuestion._id };
       const witness = organizerWitness(question, { _id: 'organizer-preview', event_run_id: 'organizer-preview-v1' });
       const discovery = organizerDiscoveryWitness(question, { _id: 'organizer-preview', event_run_id: 'organizer-preview-v1' });
+      if (question.puzzle_type === 'packing') {
+        await request(`/api/admin/puzzles/${question._id}/tool`, 401, { method: 'POST', body: {} });
+        await request(`/api/admin/puzzles/${question._id}/tool`, 409, { method: 'POST', token: organizer.token, body: {} });
+        await download(`/api/admin/puzzles/${question._id}/tool`, organizer.token, { discovery_submission: discovery });
+      }
       if (discovery) {
         equal(publicQuestion.puzzle.locked, true);
         equal('instructions' in publicQuestion.puzzle, false);
@@ -100,6 +114,10 @@ async function run() {
           await request('/api/progress/submit', 400, { method: 'POST', token: leader.token, body: { level, question_id: String(question._id), answer: '[interactive]' } });
           if (discovery) {
             equal(payload.question.puzzle.locked, true);
+            if (question.puzzle_type === 'packing') {
+              await request(`/api/questions/${question._id}/tool`, 401);
+              await request(`/api/questions/${question._id}/tool`, 409, { token: leader.token });
+            }
             await request('/api/progress/submit', 409, { method: 'POST', token: leader.token, body: { level, question_id: String(question._id), puzzle_submission: witness } });
             await request(`/api/questions/${question._id}/discover`, 400, { method: 'POST', token: leader.token, body: { discovery_submission: { ...discovery, url: 'https://example.test/wrong' } } });
             await request(`/api/questions/${question._id}/discover`, 400, { method: 'POST', token: leader.token, body: { discovery_submission: { ...discovery, instance_id: 'different-run' } } });
@@ -107,6 +125,7 @@ async function run() {
             equal(Boolean(unlocked.puzzle.locked), false);
             const refreshed = await request(`/api/questions/${level}`, 200, { token: leader.token });
             equal(Boolean(refreshed.question.puzzle.locked), false, 'Discovery persists across reload');
+            if (question.puzzle_type === 'packing') await download(`/api/questions/${question._id}/tool`, leader.token);
           }
           await request('/api/progress/submit', 400, { method: 'POST', token: leader.token, body: { level, question_id: String(question._id), puzzle_submission: { ...witness, instance_id: 'another-team-or-run' } } });
           body = { level, question_id: String(question._id), puzzle_submission: witness };

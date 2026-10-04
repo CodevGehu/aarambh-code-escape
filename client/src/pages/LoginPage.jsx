@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Link, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { Code2, ArrowRight } from 'lucide-react';
 export default function LoginPage() {
   const { user, team, loading, error, signIn } = useAuth();
@@ -17,7 +17,6 @@ export default function LoginPage() {
         <button className="btn btn-primary" id="btn-team-login" disabled={loading}>{loading ? 'Signing in…' : <>Enter escape room <ArrowRight size={18} /></>}</button>
       </form>
       <p className="muted small" style={{ marginTop:22 }}>One active session per team. Signing in elsewhere ends the previous session. Find your code on your Aarambh registration after payment is confirmed. Need help? Ask an organizer.</p>
-      <p className="small" style={{ marginTop:20 }}><Link to="/admin">Organizer sign in</Link></p>
     </div></section>
   </main>;
 }

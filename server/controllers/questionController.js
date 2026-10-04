@@ -5,7 +5,8 @@ const QuizState = require('../models/QuizState');
 const { prepareTeamQuestionSets } = require('../services/questionSets');
 const { getEventState, getRoundState } = require('../services/eventRules');
 const { getPuzzle, validateDiscovery } = require('../services/interactivePuzzles');
-const { visiblePuzzle, discoveryRequired } = require('../services/puzzleDiscovery');
+const { visiblePuzzle, discoveryRequired, discoveryUnlocked } = require('../services/puzzleDiscovery');
+const { sendPackingTool } = require('../services/packingTool');
 const { writeActivity } = require('../services/activityLog');
 
 // GET /api/questions/:level
@@ -151,4 +152,21 @@ async function discoverQuestion(req, res) {
   } catch { return res.status(503).json({ error: 'Unable to save your discovery. Retry when connected.' }); }
 }
 
-module.exports = { getQuestion, discoverQuestion };
+async function downloadQuestionTool(req, res) {
+  try {
+    if (!/^[a-f0-9]{24}$/i.test(req.params.questionId || '')) return res.status(400).json({ error: 'Invalid question.' });
+    const state = await QuizState.findOne({ key: 'global' });
+    if (getEventState(state).status !== 'active') return res.status(403).json({ error: 'The event has ended.', code: 'EVENT_ENDED' });
+    const team = await Team.findOne({ email: req.user.email?.toLowerCase().trim() });
+    if (!team) return res.status(404).json({ error: 'Team not found.' });
+    if (state.run_id && team.event_run_id !== state.run_id) return res.status(409).json({ error: 'Refresh your event session.' });
+    const mapping = await MappedQuestion.findOne({ team_id: team._id, level: team.current_level, selected_question_id: req.params.questionId });
+    if (!mapping) return res.status(409).json({ error: 'Open your current round before downloading its tool.' });
+    const question = await Question.findById(mapping.selected_question_id);
+    if (!question || question.set_id !== team.question_set_id || question.level !== team.current_level || question.puzzle_type !== 'packing' || question.puzzle_version !== 2) return res.status(404).json({ error: 'Tool not found for this room.' });
+    if (!discoveryUnlocked(getPuzzle(question, team), mapping)) return res.status(409).json({ error: 'Find the video and repository before opening the tool.', code: 'DISCOVERY_REQUIRED' });
+    if (getRoundState(team, state).requires_decision) return res.status(409).json({ error: 'Choose Continue or Skip before downloading in overtime.', code: 'OVERTIME_DECISION_REQUIRED' });
+    return await sendPackingTool(res);
+  } catch { return res.status(503).json({ error: 'The tool download is temporarily unavailable.' }); }
+}
+module.exports = { getQuestion, discoverQuestion, downloadQuestionTool };

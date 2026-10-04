@@ -1,5 +1,6 @@
 const { getPuzzle, validatePuzzle, validateDiscovery, puzzleQuestions } = require('../services/interactivePuzzles');
 const { visiblePuzzle, discoveryRequired } = require('../services/puzzleDiscovery');
+const { sendPackingTool } = require('../services/packingTool');
 
 // The organizer's rehearsal uses separate, deterministic instances and performs
 // no database writes. It never advances a team, starts an event, or awards points.
@@ -38,4 +39,12 @@ function checkPuzzle(req, res) {
     message: result.message, ...(result.valid ? { summary: result.summary || {} } : {}) });
 }
 
-module.exports = { getPuzzles, checkPuzzle, discoverPuzzle };
+async function downloadPuzzleTool(req, res) {
+  const question = previewQuestions().find(item => item._id === req.params.id);
+  if (!question || question.puzzle_type !== 'packing' || question.puzzle_version !== 2) return res.status(404).json({ error: 'Tool not found for this room.' });
+  const proof = validateDiscovery(question, previewTeam, req.body?.discovery_submission);
+  if (!proof.valid) return res.status(409).json({ error: 'Find the video and repository before opening the tool.', code: 'DISCOVERY_REQUIRED' });
+  try { return await sendPackingTool(res); }
+  catch { return res.status(503).json({ error: 'The tool download is temporarily unavailable.' }); }
+}
+module.exports = { getPuzzles, checkPuzzle, discoverPuzzle, downloadPuzzleTool };

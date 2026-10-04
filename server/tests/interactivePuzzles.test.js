@@ -10,7 +10,7 @@ test('six independent puzzle families have verified witnesses across all label/o
   const seen = new Set();
   for (const type of puzzleQuestions.map(q => q.puzzle_type)) for (let i = 0; i < 40; i += 1) {
     const q = question(type), t = team(i), puzzle = getPuzzle(q, t), witness = organizerWitness(q, t);
-    assert.equal(puzzle.version, 1);
+    assert.equal(puzzle.version, type === 'packing' ? 2 : 1);
     assert.equal(validatePuzzle(q, t, witness).valid, true, `${type} team ${i}`);
     assert.equal(JSON.stringify(puzzle), JSON.stringify(getPuzzle(q, t)));
     assert.equal(Object.hasOwn(puzzle, 'solution'), false);
@@ -32,12 +32,13 @@ test('all proofs are bound to team, question, event run and version', () => {
   assert.equal(getPuzzle({ puzzle_type: 'unknown' }, team(0)), null);
 });
 
-test('packing places six real unit triangles inside the scaled hexagon with SAT collision judging', () => {
+test('packing places twelve tool-generated unit triangles inside a tight pentagon with SAT judging', () => {
   const q = question('packing'), t = team(0), proof = organizerWitness(q, t), config = getPuzzle(q, t);
-  assert.equal(config.pieces.length, 6);
-  assert.equal(validatePuzzle(q, t, { ...proof, container_side: 1.02 }).valid, true);
-  assert.equal(validatePuzzle(q, t, { ...proof, container_side: 1.03 }).valid, false);
-  assert.equal(validatePuzzle(q, t, { ...proof, container_side: 0.99 }).valid, false);
+  assert.equal(config.pieces.length, 12);
+  assert.equal(config.container.sides, 5);
+  assert.equal(validatePuzzle(q, t, { ...proof, container_side: 2.08 }).valid, true);
+  assert.equal(validatePuzzle(q, t, { ...proof, container_side: 2.09 }).valid, false);
+  assert.equal(validatePuzzle(q, t, { ...proof, container_side: 1.72 }).valid, false);
   assert.equal(validatePuzzle(q, t, { ...proof, container_side: NaN }).valid, false);
   assert.equal(validatePuzzle(q, t, { ...proof, positions: proof.positions.map((p, i) => i === 0 ? { ...p, x: 3 } : p) }).valid, false);
   assert.equal(validatePuzzle(q, t, { ...proof, positions: proof.positions.map((p, i) => i === 0 ? { ...proof.positions[1], id: p.id } : p) }).valid, false);
@@ -51,10 +52,21 @@ test('packing places six real unit triangles inside the scaled hexagon with SAT 
 test('packing geometry accepts touching edges and practical decimal precision without trusting client polygons', () => {
   for (let i = 0; i < 24; i += 1) {
     const q = question('packing'), t = team(i), proof = organizerWitness(q, t);
-    const decimalProof = { ...proof, container_side: 1.02, positions: proof.positions.map(p => ({ ...p, x: Number(p.x.toFixed(6)), y: Number(p.y.toFixed(6)) })) };
+    const decimalProof = { ...proof, container_side: 2.08, positions: proof.positions.map(p => ({ ...p, x: Number(p.x.toFixed(6)), y: Number(p.y.toFixed(6)) })) };
     assert.equal(validatePuzzle(q, t, decimalProof).valid, true);
     assert.equal(validatePuzzle(q, t, { ...proof, positions: proof.positions.map(p => ({ ...p, vertices: [[0, 0], [0, 0], [0, 0]] })) }).valid, true);
   }
+});
+
+test('archived version-one packing questions retain their original six-piece puzzle', () => {
+  const q = { ...question('packing'), puzzle_version: 1 }, t = team(0);
+  const config = getPuzzle(q, t), proof = organizerWitness(q, t);
+  assert.equal(config.version, 1);
+  assert.equal(config.pieces.length, 6);
+  assert.equal(config.container.sides, 6);
+  assert.equal(config.target_container_side, 1.02);
+  assert.equal(validatePuzzle(q, t, proof).valid, true);
+  assert.equal(validatePuzzle({ ...q, puzzle_version: 2 }, t, proof).valid, false);
 });
 
 test('source discovery parses only approved YouTube URLs and binds proof to this puzzle instance', () => {

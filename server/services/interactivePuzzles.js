@@ -1,28 +1,32 @@
 const { createHash } = require('node:crypto');
+const pentagonFixture = require('./fixtures/pentagonPacking.json');
 
 const VERSION = 1;
 const SEED_TYPES = ['fence', 'packing', 'machine', 'courier', 'fold', 'shadow'];
 const TYPES = [...SEED_TYPES, 'sliding'];
-const titles = ['The Shared Fence', 'Six Guests, One Small Home', 'The Buttons Lie', 'One Controller, Four Deliveries', 'One Folded Cut', 'The Shadow Is the Map', 'A Fit Is Not an Exit'];
+const titles = ['The Shared Fence', 'Twelve Triangles, Five Walls', 'The Buttons Lie', 'One Controller, Four Deliveries', 'One Folded Cut', 'The Shadow Is the Map', 'A Fit Is Not an Exit'];
 const poems = {
-  fence: 'One measure for every rail, one measure for every field;\nA border serves two neighbours, and wasted space must yield.\nAt a mathematician’s packing centre, find the fence record’s trail—\nA creator technically claimed it by sharing every rail.',
-  packing: '122 marks upon a ledger, yet no stadium in sight;\nShapes sheltered inside shapes, their little house drawn tight.\nA red play button guards the lesson; yesterday’s fit stayed warm—\nSearch wandered, then polished: give six guests their form.\nFollow the description’s trail to the creator’s open tool;\nBring back both sources before you test the shrinking rule.',
-  machine: 'Three celestial buttons speak, but none explains its tongue;\nWatch where every letter lands, not merely what is sung.\nYesterday’s six become tomorrow’s six, with places rearranged—\nName the hidden dances, then leave the target changed.',
-  courier: 'Four winding roads await a traveller who cannot see the town;\nA fragile gift forbids the tunnel; stone walls turn it round.\nTeach one small law to every journey, not four memorised trails—\nThe road may turn, the compass change; the faithful rule prevails.',
-  fold: 'Two halves forget their old addresses and meet along a seam;\nOne blade writes on sleeping layers, four echoes wake the dream.\nRead reflection, fold with care, and let the paper show—\nHow one straight whisper makes a diamond when the creases go.',
-  shadow: 'Three small veils carry broken signs, each turning in the light;\nWhere darkness meets with darkness, it remains the same deep night.\nNo subtraction clears the overlap; no second copy may remain—\nPlace all three until their single shadow makes the map again.'
+  fence: 'A creator went hunting for a mathematical world record,\nbut his tools were fences, and his prize was enclosed land.\nEvery fence had the same length; every field could hold at most one unit of area.\nCould one boundary serve two neighbours and make the same fences enclose more?\nFind his fence-packing video on the platform of thumbnails, subscriptions, and a red play button.\nErich Friedman’s Packing Center is the name to follow.\nBring back the video, then build your own arrangement in this room.',
+  packing: 'A young creator set out to prove a point against Google’s AI.\nHe came back with 122 world records in the subject that keeps many engineers awake: mathematics.\nOn the platform of videos, thumbnails, and a red play button, find the story of how he packed shapes inside shapes.\nHis explanation runs for about fourteen minutes. Your round’s clock will not wait for the credits.\nThe tool he used is hiding in plain sight in the video’s description.\nBring back the video and its GitHub repository, then use what you learn to solve this room.',
+  machine: 'Six letters stand in a row. Three buttons can move them, but their labels keep the rules secret.\nThe machine has left you before-and-after examples of each button.\nFollow the letters through those examples: which places change, and which stay still?\nOnce you understand the three moves, lead the starting row to the target row.\nYour answer is the sequence of buttons you press.',
+  courier: 'One courier, four unfamiliar roads, and a fragile parcel that must never enter a tunnel.\nYou can practise on two maps; the other two will only meet your controller at the final check.\nA memorised list of turns may survive one road and fail on the next.\nWrite one set of instructions that reacts to the walls and reaches the destination on all four.\nUse the editor below to test your rule, then submit the same controller for every delivery.',
+  fold: 'An unfolded sheet must carry a diamond, but your blade is allowed only one straight cut.\nFold the paper once in each direction, bringing the stated halves together.\nA cut through the stacked layers will return as several lines when the sheet opens.\nWhich two endpoints should your single cut join so those lines become the displayed diamond?\nChoose the folds and draw that cut in the folded quarter.',
+  shadow: 'Three patterned layers stand between a lamp and a screen.\nEach can turn or slide; together they must cast the target shadow shown below.\nWhere two dark cells overlap, the screen stays dark.\nWork out where each layer belongs so every target cell is covered and no extra cell is darkened.\nPlace all three layers and submit their positions.'
 };
 const puzzleQuestions = SEED_TYPES.map((puzzle_type, index) => ({
   set_id: `L${Math.floor(index / 2) + 1}`, level: index % 2 ? 5 : 4,
-  question_text: `${titles[index]}\n\n${poems[puzzle_type]}`, correct_answer: '[interactive]', points: index % 2 ? 500 : 400, puzzle_type
+  question_text: `${titles[index]}\n\n${poems[puzzle_type]}`, correct_answer: '[interactive]', points: index % 2 ? 500 : 400, puzzle_type,
+  ...(puzzle_type === 'packing' ? { puzzle_version: 2 } : {})
 }));
 
 function identity(question, team) {
-  return createHash('sha256').update(JSON.stringify([String(team?._id || ''), String(question?._id || ''), String(team?.event_run_id || ''), question?.puzzle_type, VERSION])).digest('hex');
+  return createHash('sha256').update(JSON.stringify([String(team?._id || ''), String(question?._id || ''), String(team?.event_run_id || ''), question?.puzzle_type, question?.puzzle_version || VERSION])).digest('hex');
 }
 function variant(question, team) { return parseInt(identity(question, team).slice(0, 8), 16); }
 function base(question, team) {
-  return { version: VERSION, type: question.puzzle_type, title: titles[TYPES.indexOf(question.puzzle_type)], instance_id: identity(question, team), instructions: [], sources: [] };
+  return { version: question.puzzle_version || VERSION, type: question.puzzle_type,
+    title: question.puzzle_type === 'packing' && (question.puzzle_version || VERSION) === 1 ? 'Six Guests, One Small Home' : titles[TYPES.indexOf(question.puzzle_type)],
+    instance_id: identity(question, team), instructions: [], sources: [] };
 }
 const copy = value => JSON.parse(JSON.stringify(value));
 const integer = value => Number.isSafeInteger(value);
@@ -81,12 +85,21 @@ function slidingConfig(seed) {
 function regularPolygon(sides, radius, rotation = 0) {
   return Array.from({ length: sides }, (_, index) => { const angle = (rotation + index * 360 / sides) * Math.PI / 180; return [radius * Math.cos(angle), radius * Math.sin(angle)]; });
 }
-function packingConfig(seed) {
+function packingConfig(seed, version = 1) {
   const rotation = (seed % 12) * 15;
+  if (version === 2) return { container: { sides: 5, rotation, unit_vertices: regularPolygon(5, 1 / (2 * Math.sin(Math.PI / 5)), rotation) },
+    pieces: Array.from({ length: 12 }, (_, i) => ({ id: `triangle-${i + 1}`, vertices: regularPolygon(3, 1 / Math.sqrt(3)) })),
+    initial_container_side: 3, target_container_side: 2.08, min_container_side: 1.73, coordinate_limit: 5, tolerance: 1e-6, tool_available: true };
   return { container: { sides: 6, rotation, unit_vertices: regularPolygon(6, 1, rotation) }, pieces: Array.from({ length: 6 }, (_, i) => ({ id: `triangle-${i + 1}`, vertices: regularPolygon(3, 1 / Math.sqrt(3)) })), initial_container_side: 1.8, target_container_side: 1.02, min_container_side: 1, coordinate_limit: 4, tolerance: 1e-6 };
 }
-function packingWitness(seed) {
+function packingWitness(seed, version = 1) {
   const rotation = (seed % 12) * 15;
+  if (version === 2) {
+    const angle = rotation * Math.PI / 180, scale = 1.0001 / Math.sqrt(3);
+    return pentagonFixture.positions.map((p, i) => ({ id: `triangle-${i + 1}`,
+      x: scale * (p.x * Math.cos(angle) - p.y * Math.sin(angle)), y: scale * (p.x * Math.sin(angle) + p.y * Math.cos(angle)),
+      rotation: ((p.angle_radians * 180 / Math.PI + rotation) % 360 + 360) % 360 }));
+  }
   return Array.from({ length: 6 }, (_, i) => { const angle = (rotation + i * 60 + 30) * Math.PI / 180; return { id: `triangle-${i + 1}`, x: Math.cos(angle) / Math.sqrt(3), y: Math.sin(angle) / Math.sqrt(3), rotation: (rotation + i * 60 + 90) % 360 }; });
 }
 function machineOps(seed) {
@@ -157,7 +170,7 @@ function getPuzzle(question, team) {
   if (!question?.puzzle_type) return null;
   if (!TYPES.includes(question.puzzle_type)) return null;
   const seed = variant(question, team), result = base(question, team);
-  const configs = { fence: fenceConfig, packing: packingConfig, sliding: slidingConfig, machine: machineConfig, courier: courierConfig, fold: foldConfig, shadow: shadowConfig };
+  const configs = { fence: fenceConfig, packing: seed => packingConfig(seed, result.version), sliding: slidingConfig, machine: machineConfig, courier: courierConfig, fold: foldConfig, shadow: shadowConfig };
   Object.assign(result, configs[question.puzzle_type](seed));
   const instructions = {
     fence: ['Research the shared-fence principle from the packing video. Every candidate edge is one unit long.', 'Select at most 12 fences forming one connected network. Every used node must join at least two fences. Every enclosed field must have area at most 1.', 'Enclose a total area of at least 2.5980762114. Internal shared fences count once; open fences enclose no area. This is a finite rehearsal challenge, not a world-record claim.'],
@@ -169,6 +182,13 @@ function getPuzzle(question, team) {
     shadow: ['Rotate and place each opaque layer once so the combined shadow matches the target exactly.', 'Layers may overlap. Opaque cells combine by union: overlapping cells remain dark.', 'Only clockwise quarter-turns and whole-cell translations are permitted. Keep every layer inside the board.']
   };
   result.instructions = instructions[question.puzzle_type];
+  if (question.puzzle_type === 'packing' && result.version === 2) result.instructions = [
+    'Twelve equilateral triangles, each with side length 1, must fit inside a regular pentagon with side length at most 2.08. Every triangle must be fully inside; interiors must not overlap. Touching edges are allowed.',
+    'The creator’s tool takes three positional arguments: how many inner shapes, how many sides each inner shape has, and how many sides the container has. Work out those values from this room, then generate and inspect an arrangement.',
+    'After finding the repository, you can download a working event copy below. Run it on your device, import its result JSON, and refine the fit in the studio. A picture or printed side length alone does not complete the round.',
+    'The studio accepts both the tool’s radius/radian export and a room layout of container_side plus positions containing id, x, y and rotation. Tool results are converted to unit side lengths and your container orientation automatically.',
+    'Room coordinates increase right/down; angles are clockwise degrees from 0 up to, but not including, 360. Use every triangle once. The server judges the full geometry with tolerance 0.000001. The round timer continues throughout research and tool runs.'
+  ];
   if (Object.hasOwn(DISCOVERY_VIDEO_IDS, question.puzzle_type)) result.discovery = { clue: poems[question.puzzle_type], platform: 'YouTube', kind: 'video' };
   if (question.puzzle_type === 'packing') Object.assign(result.discovery, { tool_required: true, second_resource: 'From the moving lesson, follow the creator’s description to the open-source tool.' });
   return result;
@@ -205,7 +225,7 @@ function validatePacking(config, submission) {
     return polygon;
   });
   for (let i = 0; i < polygons.length; i += 1) for (let j = i + 1; j < polygons.length; j += 1) insist(!interiorsOverlap(polygons[i], polygons[j], config.tolerance), 'Triangles overlap.');
-  return { triangles: polygons.length, container_side: Number(submission.container_side.toFixed(8)), triangle_area: Number((6 * Math.sqrt(3) / 4).toFixed(8)) };
+  return { triangles: polygons.length, container_side: Number(submission.container_side.toFixed(8)), triangle_area: Number((config.pieces.length * Math.sqrt(3) / 4).toFixed(8)) };
 }
 
 function validateFence(config, submission) {
@@ -342,7 +362,7 @@ function organizerWitness(question, team) {
   if (question.puzzle_type === 'fence') {
     const center = config.nodes.find(n => Math.hypot(n.x, n.y) < 1e-8), ring = config.nodes.filter(n => Math.abs(Math.hypot(n.x, n.y) - 1) < 1e-8).map(n => n.id);
     answer.edges = config.edges.filter(e => (e.a === center.id && ring.includes(e.b)) || (e.b === center.id && ring.includes(e.a)) || (ring.includes(e.a) && ring.includes(e.b))).map(e => e.id);
-  } else if (question.puzzle_type === 'packing') { answer.container_side = 1; answer.positions = packingWitness(seed); }
+  } else if (question.puzzle_type === 'packing') { answer.container_side = config.version === 2 ? 2.06 : 1; answer.positions = packingWitness(seed, config.version); }
   else if (question.puzzle_type === 'sliding') { const sign = seed % 2 ? -1 : 1; answer.moves = [{ id: 'C', delta: sign }, { id: 'cargo', delta: -sign }, { id: 'A', delta: -sign }, { id: 'J', delta: -4 * sign }, { id: 'A', delta: sign }, { id: 'F', delta: sign }, { id: 'I', delta: sign }, { id: 'cargo', delta: 6 * sign }]; }
   else if (question.puzzle_type === 'machine') answer.program = machineWitness(seed).program;
   else if (question.puzzle_type === 'courier') answer.program = 'REPEAT 160\nIF_GOAL\nSTOP\nEND\nIF_RIGHT_OPEN\nTURN_RIGHT\nEND\nIF_WALL\nTURN_LEFT\nELSE\nMOVE\nEND\nEND';

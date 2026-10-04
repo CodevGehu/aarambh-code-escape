@@ -5,6 +5,7 @@ import { useGameClock, formatClock } from '../lib/gameClock';
 import GameClocks from '../components/GameClocks';
 import Navbar from '../components/Navbar';
 import api from '../lib/api';
+import { downloadPackingTool } from '../lib/downloadPackingTool';
 import ErrorPage from './ErrorPage';
 import PuzzleWorkbench, { initialPuzzleSubmission, restorePuzzleSubmission } from '../components/puzzles/PuzzleWorkbench';
 import { ArrowLeft, ArrowRight, Send, SkipForward, Check } from 'lucide-react';
@@ -98,6 +99,13 @@ function QuestionRoundPage() {
       await refreshTeam();
     } finally { setBusy(false); }
   }
+  async function downloadTool() {
+    if (busy || decision || !active || !current || question?.puzzle?.locked) return;
+    setBusy(true); setFeedback(null);
+    try { await downloadPackingTool(`/questions/${question._id}/tool`); }
+    catch { setFeedback({ type: 'error', text: 'Unable to download the tool. Refresh your round and retry.' }); }
+    finally { setBusy(false); }
+  }
   return <div className="page"><Navbar /><main className="container page-content">
     <button className="btn btn-ghost" onClick={() => navigate('/dashboard')}><ArrowLeft size={17} /> Back to rooms</button>
     <GameClocks game={game} />
@@ -105,8 +113,8 @@ function QuestionRoundPage() {
     {ended ? <section className="panel"><h1>The event has ended.</h1><p style={{ margin:'20px 0' }}>Answer submissions are closed. Your recorded answers and score are saved.</p><button className="btn btn-primary" onClick={() => navigate('/dashboard')}>View your results</button></section> : outcome ? <section className="panel panel-lime"><Check size={30} /><h2>Round {level} {outcome.status === 'skipped' ? 'skipped' : 'solved'}.</h2><p style={{ margin:'18px 0' }}>{outcome.points >= 0 ? '+' : ''}{outcome.points} points recorded. {formatClock(outcome.carry_ms)} saved for the next round.</p><button className="btn btn-primary" onClick={() => navigate('/dashboard', { state:{ justCompletedLevel:level } })}>See your next room <ArrowRight size={18} /></button></section> : !current || !active ? <section className="panel"><h2>{event?.status === 'not_started' ? 'Waiting for the shared start.' : 'This room is locked.'}</h2><p style={{ margin:'18px 0' }}>Return to your path to open the current round.</p><button className="btn btn-primary" onClick={() => navigate('/dashboard')}>Back to rooms</button></section> : <div className="question-layout"><section className="question-paper">
       <div className="terminal-label"><span className="terminal-dots" aria-hidden="true"><i /><i /><i /></span>room_{String(level).padStart(2,'0')}.txt</div><div className="question-body">
         <div className="row between"><h1 style={{ fontSize:'2.4rem' }}>Round {level}</h1><span className="badge badge-lime">{availablePoints ?? '…'} pts available</span></div>
-        {loading ? <p role="status" className="muted" style={{ margin:'30px 0' }}>Loading your clue…</p> : question ? <>{question.question_text !== question.puzzle?.title && <p className="question-text">{question.question_text}</p>}
-          {question.puzzle && puzzleDraft && <PuzzleWorkbench puzzle={question.puzzle} draft={puzzleDraft} onDiscover={discover} onChange={next => { setPuzzleDraft(next); setFeedback(null); }} disabled={busy || decision || !active || !current} />}
+        {loading ? <p role="status" className="muted" style={{ margin:'30px 0' }}>Loading your clue…</p> : question ? <>{!question.puzzle?.locked && question.question_text !== question.puzzle?.title && <p className="question-text">{question.question_text}</p>}
+          {question.puzzle && puzzleDraft && <PuzzleWorkbench puzzle={question.puzzle} draft={puzzleDraft} onDiscover={discover} onDownloadTool={downloadTool} onChange={next => { setPuzzleDraft(next); setFeedback(null); }} disabled={busy || decision || !active || !current} />}
           <form className="answer-form" onSubmit={e => action('submit', e)}>{!question.puzzle && <><label htmlFor="answer-input">Your answer</label><input className="input" id="answer-input" value={answer} onChange={e => setAnswer(e.target.value)} autoComplete="off" disabled={busy || decision} placeholder="Enter the exact answer" maxLength={2000} /></>}
             <button className="btn btn-primary" id="btn-submit-answer" disabled={busy || decision || (question.puzzle ? !puzzleDraft || question.puzzle.locked : !answer.trim())}><Send size={17} />{busy ? 'Saving…' : question.puzzle ? 'Submit solution' : 'Submit answer'}</button>
             {question.puzzle && <p className="muted small">Your work is saved on this device. Submit solution checks the puzzle and records your round score.</p>}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { downloadPackingTool } from '../lib/downloadPackingTool';
 import PuzzleWorkbench, { initialPuzzleSubmission } from '../components/puzzles/PuzzleWorkbench';
 
 export default function PuzzleLabPage() {
@@ -52,6 +53,13 @@ export default function PuzzleLabPage() {
       setFeedback({ valid: false, message: error.response?.data?.message || error.response?.data?.error || 'Unable to check the solution. Your work is still on this page.' });
     } finally { setBusy(false); }
   }
+  async function downloadTool() {
+    if (busy || !question || question.puzzle.locked) return;
+    setBusy(true); setFeedback(null);
+    try { await downloadPackingTool(`/admin/puzzles/${question._id}/tool`, draft?.discovery_submission); }
+    catch { setFeedback({ valid: false, message: 'Unable to download the tool. Check your source discovery and retry.' }); }
+    finally { setBusy(false); }
+  }
   return <div className="page"><main className="container page-content">
     <Link className="btn btn-ghost" to="/admin">Back to control room</Link>
     <div className="page-heading" style={{ marginTop: 24 }}><h1>Puzzle rehearsal</h1>
@@ -62,8 +70,8 @@ export default function PuzzleLabPage() {
         className={`btn ${item._id === selected ? 'btn-primary' : ''}`} aria-pressed={item._id === selected}
         disabled={busy} onClick={() => select(item)}>Set {item.set_id.slice(1)} · Round {item.level}<br />{item.puzzle.title}</button>)}</nav>
       {question && draft && <section className="question-paper" style={{ marginTop: 24 }}><div className="question-body">
-        {question.question_text !== question.puzzle.title && <p className="question-text">{question.question_text}</p>}
-        <PuzzleWorkbench key={question._id} puzzle={question.puzzle} draft={draft} onDiscover={discover} onChange={next => { setDraft({ ...next, ...(draft?.discovery_submission ? { discovery_submission: draft.discovery_submission } : {}) }); setFeedback(null); }} disabled={busy} />
+        {!question.puzzle.locked && question.question_text !== question.puzzle.title && <p className="question-text">{question.question_text}</p>}
+        <PuzzleWorkbench key={question._id} puzzle={question.puzzle} draft={draft} onDiscover={discover} onDownloadTool={downloadTool} onChange={next => { setDraft({ ...next, ...(draft?.discovery_submission ? { discovery_submission: draft.discovery_submission } : {}) }); setFeedback(null); }} disabled={busy} />
         <div className="answer-form"><button className="btn btn-primary" onClick={check} disabled={busy || question.puzzle.locked}>{busy ? 'Checking…' : 'Check rehearsal solution'}</button></div>
       </div></section>}
       {!question && <button className="btn" onClick={() => setRetry(value => value + 1)}>Retry loading puzzles</button>}

@@ -6,7 +6,7 @@
   "outputDirectory": "client/dist",
   "regions": ["bom1"],
   "functions": {
-    "api/index.js": { "maxDuration": 30 }
+    "api/index.js": { "maxDuration": 30, "includeFiles": "tools/polygon-packer/kit.zip" }
   },
   "rewrites": [
     { "source": "/api", "destination": "/api/index" },
