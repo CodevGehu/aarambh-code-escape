@@ -24,7 +24,11 @@ const questionSchema = new mongoose.Schema({
   set_id: {
     type: String,
     required: true
-  }
+  },
+  // Legacy hunt clues remain text questions. Interactive rounds are judged by
+  // their server-owned rules, never by a shared answer or client completion flag.
+  puzzle_type: { type: String, enum: ['fence', 'sliding', 'packing', 'machine', 'courier', 'fold', 'shadow'] },
+  archived: { type: Boolean, default: false }
 }, {
   timestamps: true
 });

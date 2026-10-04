@@ -57,5 +57,9 @@ const { getTeams, getLogs, exportLogs } = require('../controllers/adminEventCont
 router.get('/teams', adminAuth, getTeams);
 router.get('/logs', adminAuth, getLogs);
 router.get('/logs/export', adminAuth, exportLogs);
+const { getPuzzles, checkPuzzle, discoverPuzzle } = require('../controllers/adminPuzzleController');
+router.get('/puzzles', adminAuth, getPuzzles);
+router.post('/puzzles/:id/check', adminAuth, checkPuzzle);
+router.post('/puzzles/:id/discover', adminAuth, discoverPuzzle);
 
 module.exports = router;

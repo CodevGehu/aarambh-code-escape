@@ -8,6 +8,8 @@
     "start": "node server.js",
     "seed": "node seed/seedQuestions.js",
     "seed:preview": "node seed/seedQuestions.js --preview",
+    "questions:preview": "node scripts/installInteractiveQuestions.js",
+    "questions:install": "node scripts/installInteractiveQuestions.js --apply",
     "codes:issue": "node seed/issueAccessCodes.js",
     "db:check": "node scripts/checkDatabase.js",
     "test": "node --test --experimental-test-isolation=none tests/*.test.js"

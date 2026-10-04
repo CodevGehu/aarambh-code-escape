@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import QuestionPage from './pages/QuestionPage';
 import Leaderboard from './pages/Leaderboard';
 import AdminPage from './pages/AdminPage';
+import PuzzleLabPage from './pages/PuzzleLabPage';
 import ErrorPage from './pages/ErrorPage';
 import EventAnnouncement from './components/EventAnnouncement';
 import AppErrorBoundary from './components/AppErrorBoundary';
@@ -41,6 +42,7 @@ export default function App() {
               via optional chaining (team?.team_name). */}
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin/puzzles" element={<PuzzleLabPage />} />
           <Route path="*" element={<ErrorPage />} />
         </Routes>
       </AuthProvider>

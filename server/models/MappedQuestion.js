@@ -12,6 +12,8 @@ const mappedQuestionSchema = new mongoose.Schema({
     min: 1,
     max: 5
   },
+  discovery_instance_id: { type: String, default: null },
+  discovered_at: { type: Date, default: null },
   selected_question_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Question',

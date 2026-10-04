@@ -6,6 +6,7 @@ import GameClocks from '../components/GameClocks';
 import Navbar from '../components/Navbar';
 import api from '../lib/api';
 import ErrorPage from './ErrorPage';
+import PuzzleWorkbench, { initialPuzzleSubmission, restorePuzzleSubmission } from '../components/puzzles/PuzzleWorkbench';
 import { ArrowLeft, ArrowRight, Send, SkipForward, Check } from 'lucide-react';
 
 export default function QuestionPage() {
@@ -21,6 +22,7 @@ function QuestionRoundPage() {
   const game = useGameClock();
   const { team, event, round, ended, decision, expired, availablePoints, error } = game;
   const [question, setQuestion] = useState(null), [answer, setAnswer] = useState('');
+  const [puzzleDraft, setPuzzleDraft] = useState(null);
   const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState(null), [result, setResult] = useState(null);
   const [confirmSkip, setConfirmSkip] = useState(false), [retry, setRetry] = useState(0);
@@ -29,26 +31,64 @@ function QuestionRoundPage() {
   const active = event?.status === 'active' && !ended;
   useEffect(() => {
     let alive = true;
-    setQuestion(null); setAnswer(''); setFeedback(null); setResult(null); setConfirmSkip(false);
+    setQuestion(null); setAnswer(''); setPuzzleDraft(null); setFeedback(null); setResult(null); setConfirmSkip(false);
     if (!current || !active) { setLoading(false); return; }
     setLoading(true);
-    api.get(`/questions/${level}`).then(res => { if (alive) setQuestion(res.data.question); })
+    api.get(`/questions/${level}`).then(res => {
+      if (!alive) return;
+      const next = res.data.question;
+      setQuestion(next);
+      if (next.puzzle) {
+        let draft = initialPuzzleSubmission(next.puzzle);
+        try {
+          const saved = localStorage.getItem(`escape-puzzle:${next.puzzle.instance_id}`);
+          if (saved && saved.length <= 9000) draft = restorePuzzleSubmission(next.puzzle, JSON.parse(saved));
+        } catch { /* A blocked or corrupt local save must not prevent opening the room. */ }
+        setPuzzleDraft(draft);
+      }
+    })
       .catch(err => { if (alive) setFeedback({ type:'error', text:err.response?.data?.error || 'Unable to load this clue. Retry when connected.' }); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [level, current, active, retry]);
+  useEffect(() => {
+    if (!question?.puzzle || question.puzzle.locked || !puzzleDraft) return;
+    try { localStorage.setItem(`escape-puzzle:${question.puzzle.instance_id}`, JSON.stringify(puzzleDraft)); }
+    catch { /* Play remains available when local storage is unavailable. */ }
+  }, [question, puzzleDraft]);
+  async function discover(discovery_submission) {
+    if (busy || decision || !active || !current) return;
+    setBusy(true); setFeedback(null);
+    try {
+      const response = await api.post(`/questions/${question._id}/discover`, { discovery_submission });
+      const puzzle = response.data.puzzle;
+      setQuestion(previous => ({ ...previous, puzzle }));
+      let draft = initialPuzzleSubmission(puzzle);
+      try {
+        const saved = localStorage.getItem(`escape-puzzle:${puzzle.instance_id}`);
+        if (saved && saved.length <= 9000) draft = restorePuzzleSubmission(puzzle, JSON.parse(saved));
+      } catch { /* A failed optional draft restore leaves a fresh workbench. */ }
+      setPuzzleDraft(draft);
+      setFeedback({ type: 'success', text: response.data.message });
+    } catch (err) { setFeedback({ type: 'error', text: err.response?.data?.error || 'Unable to check the resource. Retry when connected.' }); }
+    finally { setBusy(false); }
+  }
   async function action(kind, e) {
     e?.preventDefault();
     if (busy) return;
-    if (kind === 'submit' && !answer.trim()) return;
+    if (kind === 'submit' && (question?.puzzle ? !puzzleDraft || question.puzzle.locked : !answer.trim())) return;
     setBusy(true); setFeedback(null);
     try {
-      const res = await api.post(`/progress/${kind}`, { level, ...(kind === 'submit' ? { answer:answer.trim() } : {}) });
+      const res = await api.post(`/progress/${kind}`, { level, ...(kind === 'submit' ?
+        question?.puzzle ? { question_id: String(question._id), puzzle_submission:puzzleDraft } : { answer:answer.trim() } : {}) });
       if (!res.data.success) throw new Error('Your action was not accepted. Please retry.');
       acceptSnapshot(res.data);
       if (kind === 'continue') {
         setFeedback({ type:'success', text:'Overtime enabled. You can keep answering; the reward decreases until you solve or skip.' });
       } else {
+        if (question?.puzzle) {
+          try { localStorage.removeItem(`escape-puzzle:${question.puzzle.instance_id}`); } catch { /* Optional draft cleanup. */ }
+        }
         setResult(res.data.outcome);
         navigate('/dashboard', { state:{ justCompletedLevel:level } });
       }
@@ -65,9 +105,11 @@ function QuestionRoundPage() {
     {ended ? <section className="panel"><h1>The event has ended.</h1><p style={{ margin:'20px 0' }}>Answer submissions are closed. Your recorded answers and score are saved.</p><button className="btn btn-primary" onClick={() => navigate('/dashboard')}>View your results</button></section> : outcome ? <section className="panel panel-lime"><Check size={30} /><h2>Round {level} {outcome.status === 'skipped' ? 'skipped' : 'solved'}.</h2><p style={{ margin:'18px 0' }}>{outcome.points >= 0 ? '+' : ''}{outcome.points} points recorded. {formatClock(outcome.carry_ms)} saved for the next round.</p><button className="btn btn-primary" onClick={() => navigate('/dashboard', { state:{ justCompletedLevel:level } })}>See your next room <ArrowRight size={18} /></button></section> : !current || !active ? <section className="panel"><h2>{event?.status === 'not_started' ? 'Waiting for the shared start.' : 'This room is locked.'}</h2><p style={{ margin:'18px 0' }}>Return to your path to open the current round.</p><button className="btn btn-primary" onClick={() => navigate('/dashboard')}>Back to rooms</button></section> : <div className="question-layout"><section className="question-paper">
       <div className="terminal-label"><span className="terminal-dots" aria-hidden="true"><i /><i /><i /></span>room_{String(level).padStart(2,'0')}.txt</div><div className="question-body">
         <div className="row between"><h1 style={{ fontSize:'2.4rem' }}>Round {level}</h1><span className="badge badge-lime">{availablePoints ?? '…'} pts available</span></div>
-        {loading ? <p role="status" className="muted" style={{ margin:'30px 0' }}>Loading your clue…</p> : question ? <><p className="question-text">{question.question_text}</p>
-          <form className="answer-form" onSubmit={e => action('submit', e)}><label htmlFor="answer-input">Your answer</label><input className="input" id="answer-input" value={answer} onChange={e => setAnswer(e.target.value)} autoComplete="off" disabled={busy || decision} placeholder="Enter the exact answer" maxLength={2000} />
-            <button className="btn btn-primary" id="btn-submit-answer" disabled={busy || decision || !answer.trim()}><Send size={17} />{busy ? 'Saving…' : 'Submit answer'}</button>
+        {loading ? <p role="status" className="muted" style={{ margin:'30px 0' }}>Loading your clue…</p> : question ? <>{question.question_text !== question.puzzle?.title && <p className="question-text">{question.question_text}</p>}
+          {question.puzzle && puzzleDraft && <PuzzleWorkbench puzzle={question.puzzle} draft={puzzleDraft} onDiscover={discover} onChange={next => { setPuzzleDraft(next); setFeedback(null); }} disabled={busy || decision || !active || !current} />}
+          <form className="answer-form" onSubmit={e => action('submit', e)}>{!question.puzzle && <><label htmlFor="answer-input">Your answer</label><input className="input" id="answer-input" value={answer} onChange={e => setAnswer(e.target.value)} autoComplete="off" disabled={busy || decision} placeholder="Enter the exact answer" maxLength={2000} /></>}
+            <button className="btn btn-primary" id="btn-submit-answer" disabled={busy || decision || (question.puzzle ? !puzzleDraft || question.puzzle.locked : !answer.trim())}><Send size={17} />{busy ? 'Saving…' : question.puzzle ? 'Submit solution' : 'Submit answer'}</button>
+            {question.puzzle && <p className="muted small">Your work is saved on this device. Submit solution checks the puzzle and records your round score.</p>}
             {decision && <p className="muted small">Choose Continue or Skip below before submitting in overtime.</p>}
           </form>
         </> : <button className="btn" style={{ marginTop:24 }} onClick={() => setRetry(value => value + 1)}>Retry loading clue</button>}

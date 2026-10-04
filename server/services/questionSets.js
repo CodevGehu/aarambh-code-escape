@@ -12,6 +12,7 @@ function configurationError(message) {
 function getQuestionSetIds(questions) {
   const sets = new Map();
   for (const question of questions) {
+    if (question.archived === true) continue;
     if (!question.set_id || !Number.isInteger(question.level) || question.level < 1 || question.level > 5) {
       throw configurationError('Every question needs a set ID and a round from 1 to 5.');
     }
@@ -58,7 +59,9 @@ function planSetAssignments(teams, setIds, pickIndex = randomInt) {
 }
 
 async function prepareTeamQuestionSets() {
-  const questions = await Question.find({}).select('_id set_id level').lean();
+  // Validate only active versions, but retain the ID-to-set lookup for archived
+  // questions referenced by a legacy team's existing mapping.
+  const questions = await Question.find({}).select('_id set_id level archived').lean();
   const setIds = getQuestionSetIds(questions);
   const teams = await Team.find(rosterFilter()).select('_id question_set_id').lean();
   const unassigned = teams.filter(team => !team.question_set_id);

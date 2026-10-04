@@ -37,11 +37,17 @@ jobs:
         run: node server/scripts/strict-workflow-smoke.js
         env:
           GAME_SMOKE_REPORT: strict-workflow-report.json
+      - name: Interactive puzzles and transactional question installation
+        run: node server/scripts/interactive-workflow-smoke.js
+        env:
+          INTERACTIVE_SMOKE_REPORT: interactive-workflow-report.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: strict-workflow-report
-          path: strict-workflow-report.json
+          path: |
+            strict-workflow-report.json
+            interactive-workflow-report.json
           if-no-files-found: ignore
       - name: Event notice tests
         run: node --test client/tests/eventNotice.test.js

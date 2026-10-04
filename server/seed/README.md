@@ -12,11 +12,17 @@ There are three complete sets, with one question in each of five rounds:
 
 | Set | Content | Points per round |
 | --- | --- | --- |
-| L1 | Existing hunt questions | 100, 200, 300, 400, 500 |
-| L2 | Easy temporary practice questions | 100, 200, 300, 400, 500 |
-| L3 | Easy temporary practice questions | 100, 200, 300, 400, 500 |
+| L1 | Existing hunt rounds 1–3; fence laboratory and cargo escape | 100, 200, 300, 400, 500 |
+| L2 | Temporary practice rounds 1–3; permutation machine and courier controller | 100, 200, 300, 400, 500 |
+| L3 | Temporary practice rounds 1–3; fold-and-cut and shadow assembly | 100, 200, 300, 400, 500 |
 
-Replace the L2/L3 text and answers in `placeholderQuestions.js` when the final questions are ready. The existing L1 questions remain in `seedQuestions.js`. Keep the set IDs and five-round structure consistent. Practice questions are deliberately marked as temporary in their displayed text; remove that label when replacing them.
+Replace the remaining L2/L3 round 1–3 practice content when the final questions arrive. The original five L1 hunt questions are retained as `legacyQuestions` in `seedQuestions.js`; fresh seeds replace only rounds 4/5 with the six definitions in `services/interactivePuzzles.js`. Keep the set IDs and five-round structure consistent. Interactive completions are checked from artifacts on the server; their placeholder `correct_answer` is never an accepted answer.
+
+Organizers can try all six puzzles at `/admin/puzzles` after signing in at `/admin`. Rehearsal checks use the same validators as competition submissions, without updating team progress, event state, or scores. These are finite, solvable rehearsal instances; difficulty equivalence and the round caps still require a pilot. The fence workbench uses the video's shared-edge and field-area principles on a finite lattice rather than asking teams to discover a new mathematical record. The courier editor runs only its bounded instruction language.
+
+To install rounds 4/5 into an existing question bank without resetting a roster, first run `npm run questions:preview`, then `npm run questions:install`. The installation creates a private backup and uses a transaction. All previous versions are archived under their original IDs and replaced with new active documents, preserving even a mapping that finishes just after the event ends. Allocation validates only active questions while retaining archived IDs for legacy mapping lookup. It refuses an active/starting/resetting event and never deletes teams, credentials, scores, results, or logs. Do not run the full seed against a live roster merely to add these puzzles.
+
+See `docs/interactive-rounds-organizer.md` for private organizer solution methods and exact rehearsal mechanics. Do not copy these solutions into participant bundles or public pages.
 
 From the `server` directory, inspect the seed without connecting to a database:
 

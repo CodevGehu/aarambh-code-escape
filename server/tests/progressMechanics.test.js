@@ -45,7 +45,7 @@ function fixture({ overtime = false, closeBeforeWrite = false, final = false, fa
         return structuredClone(stored);
       }
     },
-    'models/Question.js': { findById: async () => ({ correct_answer: 'correct', set_id: 'L2' }) },
+    'models/Question.js': { findById: async () => ({ correct_answer: 'correct', set_id: 'L2', level: final ? 5 : 1 }) },
     'models/MappedQuestion.js': { findOne: async () => ({ selected_question_id: 'question' }) },
     'models/Result.js': { findOneAndUpdate: async () => { if (failDerived) throw new Error('offline'); } },
     'services/activityLog.js': { writeActivity: async entry => { logs.push(entry); return false; }, recordObservedTimeouts: async () => {} }

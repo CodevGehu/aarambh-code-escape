@@ -76,7 +76,7 @@ function stateStore({ overlap = false, casMisses = 0, initial } = {}) {
 }
 
 test('seed exports three complete five-round paths with matching points and populated answers', () => {
-  const { questions, teams } = loadWithMocks('seed/seedQuestions.js', {
+  const { questions, teams, legacyQuestions } = loadWithMocks('seed/seedQuestions.js', {
     ...emptyModels,
     'config/db.js': () => { throw new Error('A seed test must never connect to a database'); },
     'services/questionSets.js': { getQuestionSetIds, planSetAssignments }
@@ -90,11 +90,13 @@ test('seed exports three complete five-round paths with matching points and popu
     for (const round of rounds) {
       assert.ok(round.question_text.trim());
       assert.ok(round.correct_answer.trim());
-      if (setId !== 'L1') assert.match(round.question_text, /temporary event content/);
+      if (setId !== 'L1' && round.level < 4) assert.match(round.question_text, /temporary event content/);
+      if (round.level >= 4) assert.ok(round.puzzle_type);
     }
   }
-  assert.deepEqual(questions.filter(question => question.set_id === 'L1').map(question => question.correct_answer),
+  assert.deepEqual(legacyQuestions.map(question => question.correct_answer),
     ['3882', 'pen name', 'lcc-a0acaa69', 'team codev', 'happy coding']);
+  assert.deepEqual(questions.filter(question => question.set_id === 'L1' && question.level < 4), legacyQuestions.slice(0, 3));
   assert.ok(teams.length > 0);
 });
 
@@ -106,6 +108,13 @@ test('configuration validation rejects empty, incomplete, duplicate, and invalid
     assert.throws(() => getQuestionSetIds([{ set_id: 'L1', level }]), configError);
   }
   assert.throws(() => getQuestionSetIds([{ set_id: '', level: 1 }]), configError);
+});
+
+test('archived question versions do not create duplicate active rounds or incomplete sets', () => {
+  const active = completeQuestions(['L1', 'L2', 'L3']);
+  assert.deepEqual(getQuestionSetIds([...active, { set_id: 'L1', level: 4, archived: true },
+    { set_id: 'old-set', level: 5, archived: true }]), ['L1', 'L2', 'L3']);
+  assert.throws(() => getQuestionSetIds([{ set_id: 'old-set', level: 4, archived: true }]), configError);
 });
 
 for (const setIds of [['L1', 'L2'], ['L1', 'L2', 'L3']]) {
@@ -164,6 +173,19 @@ test('preparation validates existing assignments without querying legacy mapping
     'models/QuizState.js': { findOneAndUpdate: () => assert.fail('Already assigned roster needs no plan write') }
   });
   await prepareTeamQuestionSets();
+});
+
+test('legacy mappings resolve archived question IDs while allocations validate the active bank', async () => {
+  const archived = { _id: 'previous-L2-4', set_id: 'L2', level: 4, archived: true };
+  let operations;
+  const { prepareTeamQuestionSets } = loadWithMocks('services/questionSets.js', {
+    'models/Question.js': { find: () => query([...completeQuestions(['L1', 'L2', 'L3']), archived]) },
+    'models/Team.js': { find: () => query([{ _id: 'legacy' }]), bulkWrite: async ops => { operations = ops; } },
+    'models/MappedQuestion.js': { find: () => query([{ team_id: 'legacy', level: 4, selected_question_id: archived._id }]) },
+    'models/QuizState.js': stateStore().model
+  });
+  await prepareTeamQuestionSets();
+  assert.equal(operations[0].updateOne.update.$set.question_set_id, 'L2');
 });
 
 for (const mappings of [
@@ -382,7 +404,7 @@ test('question retrieval selects the authenticated team set and omits answers an
   const fixture = controllerFixture();
   await fixture.getQuestion(fixture.req, fixture.res);
   assert.equal(fixture.res.statusCode, 200);
-  assert.deepEqual(fixture.calls.findQuestion, [{ level: 2, set_id: 'L2' }]);
+  assert.deepEqual(fixture.calls.findQuestion, [{ level: 2, set_id: 'L2', archived: { $ne: true } }]);
   assert.deepEqual(fixture.calls.mappings[0], [
     { team_id: 'team', level: 2 },
     { $setOnInsert: { team_id: 'team', level: 2, selected_question_id: 'L2-2' } },
@@ -435,7 +457,7 @@ test('future rounds remain locked even with a valid assigned set', async () => {
 
 test('missing round in assigned set never falls back to another set', async () => {
   const fixture = controllerFixture({ 'models/Question.js': {
-    findOne: async filter => { assert.deepEqual(filter, { level: 2, set_id: 'L2' }); return null; },
+    findOne: async filter => { assert.deepEqual(filter, { level: 2, set_id: 'L2', archived: { $ne: true } }); return null; },
     findById: () => assert.fail('No mapping should have been created')
   } });
   await fixture.getQuestion(fixture.req, fixture.res);

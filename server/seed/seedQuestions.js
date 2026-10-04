@@ -9,7 +9,7 @@ const connectDB = require('../config/db');
 // Three complete sets: existing L1 hunt + temporary easy L2 and L3 sets.
 // Replace temporary content in placeholderQuestions.js before the event.
 // ========================================
-const questions = [
+const legacyQuestions = [
   // Level 1 — Easy (100 points) — from LAST QUESTION in MD
   {
     level: 1, set_id: 'L1',
@@ -132,7 +132,12 @@ Hint:
 ];
 
 
-questions.push(...require('./placeholderQuestions'));
+// Retain the original hunt questions for organizers. Fresh rehearsals replace
+// only rounds 4/5; rounds 1–3 and the roster retain their previous content.
+const legacyQuestionBank = [...legacyQuestions, ...require('./placeholderQuestions')];
+const interactiveQuestions = require('../services/interactivePuzzles').puzzleQuestions;
+const questions = legacyQuestionBank.map(question =>
+  interactiveQuestions.find(item => item.set_id === question.set_id && item.level === question.level) || question);
 
 const { getQuestionSetIds, planSetAssignments } = require('../services/questionSets');
 const { prepareAccessCodes, savePrivateExport } = require('./accessCodeExport');
@@ -455,7 +460,8 @@ if (require.main === module) {
       sets: getQuestionSetIds(questions).map(setId => ({
         set_id: setId,
         rounds: questions.filter(question => question.set_id === setId).map(question => question.level),
-        placeholder: setId !== 'L1'
+        placeholder_rounds: questions.filter(question => question.set_id === setId && /temporary event content/.test(question.question_text)).map(question => question.level),
+        interactive_rounds: questions.filter(question => question.set_id === setId && question.puzzle_type).map(question => ({ level: question.level, type: question.puzzle_type }))
       }))
     }, null, 2));
   } else {
@@ -463,5 +469,5 @@ if (require.main === module) {
   }
 }
 
-module.exports = { questions, teams };
+module.exports = { questions, teams, legacyQuestions, legacyQuestionBank };
 

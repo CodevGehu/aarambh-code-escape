@@ -4,6 +4,9 @@ const Team = require('../models/Team');
 const QuizState = require('../models/QuizState');
 const { prepareTeamQuestionSets } = require('../services/questionSets');
 const { getEventState, getRoundState } = require('../services/eventRules');
+const { getPuzzle, validateDiscovery } = require('../services/interactivePuzzles');
+const { visiblePuzzle, discoveryRequired } = require('../services/puzzleDiscovery');
+const { writeActivity } = require('../services/activityLog');
 
 // GET /api/questions/:level
 //
@@ -48,6 +51,9 @@ const getQuestion = async (req, res) => {
     if (levelNum > team.current_level) {
       return res.status(403).json({ error: 'Level not yet unlocked.' });
     }
+    if (state.run_id && team.event_run_id !== state.run_id) {
+      return res.status(409).json({ error: 'The event is initializing. Please retry.', code: 'EVENT_INITIALIZING' });
+    }
 
     // Compatibility for a quiz started before persistent set assignments existed.
     if (!team.question_set_id) {
@@ -66,7 +72,7 @@ const getQuestion = async (req, res) => {
 
     if (!mapping) {
       // 6. Resolve this round inside the team's assigned path, never another set.
-      const selectedQuestion = await Question.findOne({ level: levelNum, set_id: team.question_set_id });
+      const selectedQuestion = await Question.findOne({ level: levelNum, set_id: team.question_set_id, archived: { $ne: true } });
 
       if (!selectedQuestion) {
         return res.status(404).json({ error: 'No question available for this round in your assigned set.' });
@@ -91,11 +97,12 @@ const getQuestion = async (req, res) => {
     if (!question) {
       return res.status(404).json({ error: 'Question not found in the database.' });
     }
-    if (question.set_id !== team.question_set_id) {
+    if (question.set_id !== team.question_set_id || question.level !== levelNum) {
       return res.status(409).json({ error: 'Question assignment does not match your team set. Contact an organizer.' });
     }
 
     // 8. NEVER return correct_answer — it only lives on the server
+    const puzzle = visiblePuzzle(question, team, mapping);
     res.json({
       event: getEventState(state),
       round: getRoundState(team, state),
@@ -103,7 +110,8 @@ const getQuestion = async (req, res) => {
         _id: question._id,
         level: question.level,
         question_text: question.question_text,
-        points: getEventState(state).config.round_points[levelNum - 1]
+        points: getEventState(state).config.round_points[levelNum - 1],
+        ...(puzzle ? { puzzle } : {})
       }
     });
 
@@ -116,4 +124,31 @@ const getQuestion = async (req, res) => {
   }
 };
 
-module.exports = { getQuestion };
+async function discoverQuestion(req, res) {
+  try {
+    if (!/^[a-f0-9]{24}$/i.test(req.params.questionId || '')) return res.status(400).json({ error: 'Invalid question.' });
+    const state = await QuizState.findOne({ key: 'global' });
+    if (getEventState(state).status !== 'active') return res.status(403).json({ error: 'The event has ended.', code: 'EVENT_ENDED' });
+    const team = await Team.findOne({ email: req.user.email?.toLowerCase().trim() });
+    if (!team) return res.status(404).json({ error: 'Team not found.' });
+    if (state.run_id && team.event_run_id !== state.run_id) return res.status(409).json({ error: 'Refresh your event session.', code: 'EVENT_INITIALIZING' });
+    const mapping = await MappedQuestion.findOne({ team_id: team._id, level: team.current_level, selected_question_id: req.params.questionId });
+    if (!mapping) return res.status(409).json({ error: 'Open your current round before following its trail.', code: 'PROGRESS_CONFLICT' });
+    const question = await Question.findById(mapping.selected_question_id);
+    if (!question || question.level !== team.current_level || question.set_id !== team.question_set_id) return res.status(409).json({ error: 'Question assignment changed.' });
+    if (getRoundState(team, state).requires_decision) return res.status(409).json({ error: 'Choose Continue or Skip before following the trail in overtime.', code: 'OVERTIME_DECISION_REQUIRED' });
+    const puzzle = getPuzzle(question, team);
+    if (!discoveryRequired(puzzle)) return res.status(400).json({ error: 'This room has no resource trail.' });
+    const result = validateDiscovery(question, team, req.body?.discovery_submission);
+    if (!result.valid) return res.status(400).json({ error: result.message, code: 'INVALID_DISCOVERY' });
+    const saved = await MappedQuestion.findOneAndUpdate({ _id: mapping._id, selected_question_id: question._id },
+      { $set: { discovery_instance_id: puzzle.instance_id, discovered_at: new Date() } }, { new: true });
+    const [latestState, latestTeam] = await Promise.all([QuizState.findOne({ key: 'global' }), Team.findById(team._id)]);
+    if (!saved || !latestTeam || latestTeam.current_level !== team.current_level || latestTeam.event_run_id !== team.event_run_id || getEventState(latestState).status !== 'active') return res.status(409).json({ error: 'The event or your round changed. Refresh your team.', code: 'PROGRESS_CONFLICT' });
+    await writeActivity({ event_id: `discovery:${puzzle.instance_id}`, team_id: team._id, action: 'resource_discovered', level: team.current_level,
+      metadata: { run_id: state.run_id, puzzle_type: question.puzzle_type } });
+    return res.json({ puzzle, message: 'Resource found. Apply its method to your team’s puzzle.' });
+  } catch { return res.status(503).json({ error: 'Unable to save your discovery. Retry when connected.' }); }
+}
+
+module.exports = { getQuestion, discoverQuestion };

@@ -5,6 +5,8 @@ const Question = require('../models/Question');
 const QuizState = require('../models/QuizState');
 const { getEventState, getRoundState, publicTeam, outcomeUpdate } = require('../services/eventRules');
 const { writeActivity, recordObservedTimeouts } = require('../services/activityLog');
+const { validatePuzzle, getPuzzle } = require('../services/interactivePuzzles');
+const { discoveryUnlocked } = require('../services/puzzleDiscovery');
 const normalize = value => value.toLowerCase().trim().replace(/\s+/g, ' ');
 const reply = (res, team, state, extra = {}, now = new Date()) => res.json({ success: true,
   team: publicTeam(team, state, now), event: getEventState(state, now), ...extra });
@@ -58,24 +60,47 @@ async function finishRound(req, res, action) {
     const data = await context(req, res, true, now);
     if (!data) return;
     const { state, team } = data;
+    let puzzleResult = null;
+    let puzzleType = null;
     await recordObservedTimeouts([team], state, now);
     if (action === 'solved') {
-      if (typeof req.body.answer !== 'string' || req.body.answer.length > 2000) {
-        return res.status(400).json({ error: 'Enter an answer of at most 2000 characters.' });
-      }
       const mapping = await MappedQuestion.findOne({ team_id: team._id, level: team.current_level });
       if (!mapping) return res.status(404).json({ error: 'Open the round question before submitting.' });
       const question = await Question.findById(mapping.selected_question_id);
-      if (!question || question.set_id !== team.question_set_id) {
+      if (!question || question.set_id !== team.question_set_id || question.level !== team.current_level) {
         return res.status(409).json({ error: 'Question assignment changed. Contact an organizer.' });
       }
       if (getRoundState(team, state, now).requires_decision) {
         return res.status(409).json({ code: 'OVERTIME_DECISION_REQUIRED', error: 'Choose Continue or Skip before answering in overtime.' });
       }
-      if (normalize(req.body.answer) !== normalize(question.correct_answer)) {
+      let valid;
+      let validationMessage = 'Incorrect answer.';
+      if (question.puzzle_type) {
+        puzzleType = question.puzzle_type;
+        if (req.body.question_id !== String(question._id)) {
+          return res.status(409).json({ error: 'This puzzle has changed. Reload the round before submitting.', code: 'PUZZLE_INSTANCE_CHANGED' });
+        }
+        const submission = req.body.puzzle_submission;
+        if (!submission || typeof submission !== 'object' || Array.isArray(submission) || JSON.stringify(submission).length > 9000) {
+          return res.status(400).json({ error: 'Submit a puzzle arrangement or program of at most 9000 characters.', code: 'INVALID_PUZZLE_SUBMISSION' });
+        }
+        if (!discoveryUnlocked(getPuzzle(question, team), mapping)) {
+          return res.status(409).json({ error: 'Decipher the clue and find its resource before submitting this puzzle.', code: 'DISCOVERY_REQUIRED' });
+        }
+        puzzleResult = validatePuzzle(question, team, submission);
+        valid = puzzleResult.valid;
+        validationMessage = puzzleResult.message || 'The arrangement does not satisfy the puzzle rules.';
+      } else {
+        if (typeof req.body.answer !== 'string' || req.body.answer.length > 2000) {
+          return res.status(400).json({ error: 'Enter an answer of at most 2000 characters.' });
+        }
+        valid = normalize(req.body.answer) === normalize(question.correct_answer);
+      }
+      if (!valid) {
         await writeActivity({ team_id: team._id, action: 'incorrect_answer', level: team.current_level, timestamp: now,
-          before: team.total_points, after: team.total_points, metadata: { run_id: state.run_id } });
-        return res.status(400).json({ code: 'INCORRECT_ANSWER', error: 'Incorrect answer.' });
+          before: team.total_points, after: team.total_points, metadata: { run_id: state.run_id,
+            ...(question.puzzle_type ? { puzzle_type: question.puzzle_type } : {}) } });
+        return res.status(400).json({ code: question.puzzle_type ? 'INVALID_PUZZLE_SOLUTION' : 'INCORRECT_ANSWER', error: validationMessage });
       }
     }
     let changes;
@@ -83,12 +108,17 @@ async function finishRound(req, res, action) {
     catch (error) {
       return res.status(error.code === 'EVENT_ENDED' ? 403 : 409).json({ error: error.message, code: error.code });
     }
+    if (puzzleResult) {
+      changes.outcome.puzzle_summary = puzzleResult.summary || {};
+      changes.outcome.puzzle_type = puzzleType;
+    }
     const updated = await Team.findOneAndUpdate(casFilter(team, state, req), changes.update, { new: true });
     if (!updated) return conflict(res);
     const outcome = changes.outcome;
     await writeActivity({ event_id: outcome.id, team_id: team._id, action, level: outcome.level,
       timestamp: outcome.timestamp, delta: outcome.points, before: outcome.before, after: outcome.after,
-      metadata: { run_id: state.run_id, carry_ms: outcome.carry_ms, overtime_ms: outcome.overtime_ms } });
+      metadata: { run_id: state.run_id, carry_ms: outcome.carry_ms, overtime_ms: outcome.overtime_ms,
+        ...(puzzleResult ? { puzzle_type: puzzleType, puzzle_summary: puzzleResult.summary || {} } : {}) } });
     if (updated.current_level <= 5) {
       const nextRound = getRoundState(updated, state, now);
       await writeActivity({ event_id: `${outcome.id}:next`, team_id: team._id, action: 'round_started',
