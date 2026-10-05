@@ -1,0 +1,35 @@
+{
+  "prepared_date": "2026-10-05",
+  "files": [
+    {
+      "file": "code_escape_round1_ready.zip",
+      "bytes": 7795,
+      "sha256": "f8701670c8bc8833f0692b7363fbf2e531faae95da2a5611df2b58e1a7ee8bc9"
+    },
+    {
+      "file": "Code_Escape_Round_1_Technical_Implementation_Guide.docx",
+      "bytes": 41929,
+      "sha256": "683586d8ada4ae82feef16123e06cc56f9d54cf3423a2b68842c470049e9bdda"
+    },
+    {
+      "file": "code_escape_round2_ready_v2.zip",
+      "bytes": 169658,
+      "sha256": "a5799d00f43fc48bb6f740743f7ff1426246427e248cf2445ac2936b2fb6915e"
+    },
+    {
+      "file": "Code_Escape_Round_2_Technical_Implementation_Guide.docx",
+      "bytes": 41030,
+      "sha256": "2d128f70381ed4b884a66b96e71de49594f4e882815549298783ae0a4911343f"
+    },
+    {
+      "file": "code_escape_round3_final.zip",
+      "bytes": 6207,
+      "sha256": "685f8b2351ba069990fbb9eec9556acf3d41c3212e5b87459ec82a0f56e1a71a"
+    },
+    {
+      "file": "Code_Escape_Round_3_Technical_Implementation_Guide.docx",
+      "bytes": 41721,
+      "sha256": "eaf2649011717f05cce11f3fd9f80dec4d824390faae8630dbed7724fecbf3c3"
+    }
+  ]
+}
