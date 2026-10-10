@@ -37,6 +37,7 @@ const teamSchema = new mongoose.Schema({
   event_run_id: { type: String, default: null },
   event_open: { type: Boolean, default: false },
   progress_version: { type: Number, default: 0 },
+  puzzle_write_version: { type: Number, default: 0 },
   round_started_at: { type: Date, default: null },
   carry_ms: { type: Number, default: 0 },
   overtime_continued_at: { type: Date, default: null },

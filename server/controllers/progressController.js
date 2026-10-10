@@ -7,6 +7,9 @@ const { getEventState, getRoundState, publicTeam, outcomeUpdate } = require('../
 const { writeActivity, recordObservedTimeouts } = require('../services/activityLog');
 const { validatePuzzle, getPuzzle } = require('../services/interactivePuzzles');
 const { discoveryUnlocked } = require('../services/puzzleDiscovery');
+const { isEarly, validateEarly } = require('../services/earlyRoundPuzzles');
+const { consumeAnswerAttempt } = require('./earlyRoundController');
+const { withCurrentPuzzle } = require('../services/earlyRoundContext');
 const normalize = value => value.toLowerCase().trim().replace(/\s+/g, ' ');
 const reply = (res, team, state, extra = {}, now = new Date()) => res.json({ success: true,
   team: publicTeam(team, state, now), event: getEventState(state, now), ...extra });
@@ -84,10 +87,16 @@ async function finishRound(req, res, action) {
         if (!submission || typeof submission !== 'object' || Array.isArray(submission) || JSON.stringify(submission).length > 9000) {
           return res.status(400).json({ error: 'Submit a puzzle arrangement or program of at most 9000 characters.', code: 'INVALID_PUZZLE_SUBMISSION' });
         }
-        if (!discoveryUnlocked(getPuzzle(question, team), mapping)) {
+        if (!isEarly(question) && !discoveryUnlocked(getPuzzle(question, team), mapping)) {
           return res.status(409).json({ error: 'Decipher the clue and find its resource before submitting this puzzle.', code: 'DISCOVERY_REQUIRED' });
         }
-        puzzleResult = validatePuzzle(question, team, submission);
+        if (isEarly(question)) {
+          req.params.questionId = String(question._id);
+          puzzleResult = await withCurrentPuzzle(req, async ({ document }, session) => {
+            await consumeAnswerAttempt(document, session);
+            return validateEarly(question, document, submission);
+          });
+        } else puzzleResult = validatePuzzle(question, team, submission);
         valid = puzzleResult.valid;
         validationMessage = puzzleResult.message || 'The arrangement does not satisfy the puzzle rules.';
       } else {
@@ -135,7 +144,7 @@ async function finishRound(req, res, action) {
     }
     reply(res, updated, state, { outcome, ...(action === 'solved' ? { points_awarded: outcome.points } :
       { points_deducted: -outcome.points }) });
-  } catch { safeError(res); }
+  } catch (error) { if (error.status) return res.status(error.status).json({ error: error.message, code: error.code }); safeError(res); }
 }
 const submitProgress = (req, res) => finishRound(req, res, 'solved');
 const skipRound = (req, res) => finishRound(req, res, 'skipped');

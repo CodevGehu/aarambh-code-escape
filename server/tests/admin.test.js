@@ -24,7 +24,7 @@ function loadWithMocks(relative, mocks = {}) {
 const query = rows => ({ select() { return this; }, sort() { return this; }, skip(value) { this.offset = value; return this; },
   limit(value) { this.size = value; return this; }, lean: async () => rows });
 const response = () => ({ statusCode: 200, headers: {}, status(code) { this.statusCode = code; return this; },
-  json(body) { this.body = body; return this; }, set(key, value) { this.headers[key] = value; return this; }, send(body) { this.body = body; return this; } });
+  json(body) { this.body = body; return this; }, set(key, value) { if (typeof key === 'object') Object.assign(this.headers, key); else this.headers[key] = value; return this; }, send(body) { this.body = body; return this; } });
 const id = '507f1f77bcf86cd799439011';
 
 test('admin snapshots expose clocks and outcomes without active session IDs or credential hashes', async () => {
@@ -111,4 +111,80 @@ test('admin team and activity endpoints require an organizer token', () => {
     route.stack[0].handle({ header: () => undefined }, res, () => { passed = true; });
     assert.equal(res.statusCode, 401); assert.equal(passed, false);
   }
+});
+
+test('organizer JWTs require fixed algorithm, role, issuer, audience and a live server session', async () => {
+  const jwt = require('jsonwebtoken');
+  const { ISSUER, AUDIENCE } = require('../services/adminSessions');
+  const previous = process.env.JWT_ADMIN_SECRET;
+  const secret = 'unit-test-organizer-secret-only-1234567890';
+  process.env.JWT_ADMIN_SECRET = secret;
+  const sid = '11111111-1111-4111-8111-111111111111';
+  let active = true, sessionLookups = 0;
+  const auth = loadWithMocks('middleware/adminAuth.js', {
+    'models/AdminSession.js': { findOne(filter) {
+      sessionLookups += 1; assert.equal(filter.session_id, sid); assert.equal(filter.revoked_at, null);
+      assert.ok(filter.expires_at.$gt instanceof Date);
+      return { lean: async () => active ? { session_id: sid } : null };
+    } }
+  });
+  const claims = { isAdmin: true, role: 'admin', username: 'admin', sid };
+  const options = { algorithm: 'HS256', issuer: ISSUER, audience: AUDIENCE, expiresIn: '2h' };
+  async function check(token) {
+    const res = response(); let passed = false;
+    await auth({ header: () => `Bearer ${token}` }, res, () => { passed = true; });
+    assert.match(res.headers['Cache-Control'], /no-store/); return { passed, res };
+  }
+  try {
+    const valid = jwt.sign(claims, secret, options);
+    assert.equal((await check(valid)).passed, true);
+    const lookups = sessionLookups;
+    for (const token of [
+      jwt.sign({ isAdmin: true }, secret),
+      jwt.sign({ ...claims, role: 'team' }, secret, options),
+      jwt.sign(claims, secret, { ...options, issuer: 'wrong' }),
+      jwt.sign(claims, secret, { ...options, audience: 'participant' }),
+      jwt.sign(claims, secret, { ...options, algorithm: 'HS384' }),
+      jwt.sign(claims, secret, { ...options, expiresIn: -1 }),
+      jwt.sign(claims, 'participant-signing-key', options)
+    ]) { const result = await check(token); assert.equal(result.passed, false); assert.equal(result.res.statusCode, 401); }
+    assert.equal(sessionLookups, lookups, 'invalid credentials must fail before database access');
+    active = false;
+    assert.equal((await check(valid)).res.statusCode, 401, 'revoked or expired server session invalidates an otherwise valid JWT');
+  } finally { if (previous === undefined) delete process.env.JWT_ADMIN_SECRET; else process.env.JWT_ADMIN_SECRET = previous; }
+});
+
+test('organizer login stores an expiring session and signs only the strict organizer audience', async () => {
+  const jwt = require('jsonwebtoken');
+  const previous = process.env.JWT_ADMIN_SECRET;
+  process.env.JWT_ADMIN_SECRET = 'unit-test-organizer-secret-only-1234567890';
+  let saved;
+  const sessions = loadWithMocks('services/adminSessions.js', {
+    'models/AdminSession.js': { create: async row => { saved = row; } }
+  });
+  try {
+    const result = await sessions.createSession();
+    const claims = jwt.verify(result.token, process.env.JWT_ADMIN_SECRET,
+      { algorithms: ['HS256'], issuer: sessions.ISSUER, audience: sessions.AUDIENCE });
+    assert.equal(claims.sid, saved.session_id); assert.equal(claims.role, 'admin');
+    assert.equal(claims.exp - claims.iat, 7200);
+    assert.equal(result.expires_at, saved.expires_at.toISOString());
+    assert.equal(saved.username, 'admin'); assert.equal(saved.password, undefined);
+  } finally { if (previous === undefined) delete process.env.JWT_ADMIN_SECRET; else process.env.JWT_ADMIN_SECRET = previous; }
+});
+
+test('organizer guesses share one durable counter without persisting credentials or IPs', async () => {
+  let count = 0; const writes = [];
+  const sessions = loadWithMocks('services/adminSessions.js', {
+    'models/AdminAccessAttempt.js': { findOneAndUpdate: async (filter, update) => {
+      writes.push({ filter, update }); return { count: ++count };
+    } }
+  });
+  for (let index = 1; index <= 11; index += 1) {
+    const result = await sessions.reserveAttempt('admin-login', '127.0.0.1', 10);
+    assert.equal(result.allowed, index <= 10); assert.ok(result.retry_after > 0);
+  }
+  assert.equal(new Set(writes.map(row => row.filter.key)).size, 1);
+  assert.equal(JSON.stringify(writes).includes('127.0.0.1'), false);
+  assert.match(writes[0].filter.key, /^[a-f0-9]{64}$/);
 });

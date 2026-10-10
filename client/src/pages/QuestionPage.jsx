@@ -6,6 +6,8 @@ import GameClocks from '../components/GameClocks';
 import Navbar from '../components/Navbar';
 import api from '../lib/api';
 import { downloadPackingTool } from '../lib/downloadPackingTool';
+import { downloadArtifact } from '../lib/downloadArtifact';
+import { EARLY_TYPES, finalRoundSubmission } from '../lib/roundPuzzles';
 import ErrorPage from './ErrorPage';
 import PuzzleWorkbench, { initialPuzzleSubmission, restorePuzzleSubmission } from '../components/puzzles/PuzzleWorkbench';
 import { ArrowLeft, ArrowRight, Send, SkipForward, Check } from 'lucide-react';
@@ -43,7 +45,7 @@ function QuestionRoundPage() {
         let draft = initialPuzzleSubmission(next.puzzle);
         try {
           const saved = localStorage.getItem(`escape-puzzle:${next.puzzle.instance_id}`);
-          if (saved && saved.length <= 9000) draft = restorePuzzleSubmission(next.puzzle, JSON.parse(saved));
+          if (saved && saved.length <= (EARLY_TYPES.has(next.puzzle.type) ? 90000 : 9000)) draft = restorePuzzleSubmission(next.puzzle, JSON.parse(saved));
         } catch { /* A blocked or corrupt local save must not prevent opening the room. */ }
         setPuzzleDraft(draft);
       }
@@ -81,7 +83,7 @@ function QuestionRoundPage() {
     setBusy(true); setFeedback(null);
     try {
       const res = await api.post(`/progress/${kind}`, { level, ...(kind === 'submit' ?
-        question?.puzzle ? { question_id: String(question._id), puzzle_submission:puzzleDraft } : { answer:answer.trim() } : {}) });
+        question?.puzzle ? { question_id: String(question._id), instance_id:question.puzzle.instance_id,puzzle_submission:finalRoundSubmission(question.puzzle,puzzleDraft) } : { answer:answer.trim() } : {}) });
       if (!res.data.success) throw new Error('Your action was not accepted. Please retry.');
       acceptSnapshot(res.data);
       if (kind === 'continue') {
@@ -106,6 +108,21 @@ function QuestionRoundPage() {
     catch { setFeedback({ type: 'error', text: 'Unable to download the tool. Refresh your round and retry.' }); }
     finally { setBusy(false); }
   }
+  async function roundAction(kind,body) {
+    if (busy || decision || !active || !current) throw new Error('This round is not available for an action.');
+    setBusy(true);setFeedback(null);
+    try {
+      const response=await api.post(`/round-puzzles/${question._id}/${kind}`,{instance_id:question.puzzle.instance_id,...body});
+      if(response.data.puzzle)setQuestion(previous=>({...previous,puzzle:response.data.puzzle}));
+      return response.data;
+    } finally {setBusy(false);}
+  }
+  async function roundArtifact(id) {
+    if (busy || decision || !active || !current) throw new Error('This round is not available for a download.');
+    setBusy(true);
+    try {await downloadArtifact(`/round-puzzles/${question._id}/artifacts/${id}`,question.puzzle.instance_id);}
+    finally {setBusy(false);}
+  }
   return <div className="page"><Navbar /><main className="container page-content">
     <button className="btn btn-ghost" onClick={() => navigate('/dashboard')}><ArrowLeft size={17} /> Back to rooms</button>
     <GameClocks game={game} />
@@ -114,7 +131,7 @@ function QuestionRoundPage() {
       <div className="terminal-label"><span className="terminal-dots" aria-hidden="true"><i /><i /><i /></span>room_{String(level).padStart(2,'0')}.txt</div><div className="question-body">
         <div className="row between"><h1 style={{ fontSize:'2.4rem' }}>Round {level}</h1><span className="badge badge-lime">{availablePoints ?? '…'} pts available</span></div>
         {loading ? <p role="status" className="muted" style={{ margin:'30px 0' }}>Loading your clue…</p> : question ? <>{!question.puzzle?.locked && question.question_text !== question.puzzle?.title && <p className="question-text">{question.question_text}</p>}
-          {question.puzzle && puzzleDraft && <PuzzleWorkbench puzzle={question.puzzle} draft={puzzleDraft} onDiscover={discover} onDownloadTool={downloadTool} onChange={next => { setPuzzleDraft(next); setFeedback(null); }} disabled={busy || decision || !active || !current} />}
+          {question.puzzle && puzzleDraft && <PuzzleWorkbench puzzle={question.puzzle} draft={puzzleDraft} onDiscover={discover} onDownloadTool={downloadTool} onAction={roundAction} onArtifact={roundArtifact} onChange={next => { setPuzzleDraft(next); setFeedback(null); }} disabled={busy || decision || !active || !current} />}
           <form className="answer-form" onSubmit={e => action('submit', e)}>{!question.puzzle && <><label htmlFor="answer-input">Your answer</label><input className="input" id="answer-input" value={answer} onChange={e => setAnswer(e.target.value)} autoComplete="off" disabled={busy || decision} placeholder="Enter the exact answer" maxLength={2000} /></>}
             <button className="btn btn-primary" id="btn-submit-answer" disabled={busy || decision || (question.puzzle ? !puzzleDraft || question.puzzle.locked : !answer.trim())}><Send size={17} />{busy ? 'Saving…' : question.puzzle ? 'Submit solution' : 'Submit answer'}</button>
             {question.puzzle && <p className="muted small">Your work is saved on this device. Submit solution checks the puzzle and records your round score.</p>}

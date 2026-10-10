@@ -7,6 +7,7 @@ import QuestionPage from './pages/QuestionPage';
 import Leaderboard from './pages/Leaderboard';
 import AdminPage from './pages/AdminPage';
 import PuzzleLabPage from './pages/PuzzleLabPage';
+import AnswerBookletPage from './pages/AnswerBookletPage';
 import ErrorPage from './pages/ErrorPage';
 import EventAnnouncement from './components/EventAnnouncement';
 import AppErrorBoundary from './components/AppErrorBoundary';
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/admin/puzzles" element={<PuzzleLabPage />} />
+          <Route path="/admin/answer-booklet" element={<AnswerBookletPage />} />
           <Route path="*" element={<ErrorPage />} />
         </Routes>
       </AuthProvider>

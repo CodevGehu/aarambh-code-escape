@@ -1,0 +1,13 @@
+const express = require('express');
+const adminAuth = require('../middleware/adminAuth');
+const c = require('../controllers/earlyRehearsalController');
+const router = express.Router();
+router.use(adminAuth);
+router.post('/', c.createRehearsal);
+router.post('/:id/signal', c.signal);
+router.post('/:id/repair', c.repair);
+router.post('/:id/probe', c.probe);
+router.post('/:id/check', c.check);
+router.post('/:id/reference-check', c.referenceCheck);
+router.get('/:id/artifacts/:artifactId', c.downloadArtifact);
+module.exports = router;

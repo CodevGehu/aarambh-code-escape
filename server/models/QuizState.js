@@ -14,6 +14,7 @@ const quizStateSchema = new mongoose.Schema({
   config: { type: mongoose.Schema.Types.Mixed, default: () => require('../services/eventRules').defaultConfig() },
   frozen_config: { type: mongoose.Schema.Types.Mixed, default: null },
   config_version: { type: Number, default: 0 },
+  puzzle_write_version: { type: Number, default: 0 },
   // One committed allocation plan shared by every backend worker.
   question_set_assignments: {
     type: [new mongoose.Schema({

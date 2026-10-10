@@ -1,0 +1,10 @@
+const express = require('express');
+const { authMiddleware } = require('../middleware/auth');
+const { signal, repair, probe, downloadArtifact } = require('../controllers/earlyRoundController');
+const router = express.Router();
+router.use(authMiddleware);
+router.post('/:questionId/signal', signal);
+router.post('/:questionId/repair', repair);
+router.post('/:questionId/probe', probe);
+router.get('/:questionId/artifacts/:artifactId', downloadArtifact);
+module.exports = router;

@@ -13,7 +13,7 @@ api.interceptors.request.use(config => {
 });
 api.interceptors.response.use(response => response, error => {
   const url = error.config?.url || '';
-  if (error.response?.status === 401 && /^\/(auth\/(me|logout)|questions(?:\/|$)|progress(?:\/|$))/.test(url)) {
+  if (error.response?.status === 401 && /^\/(auth\/(me|logout)|questions(?:\/|$)|round-puzzles(?:\/|$)|progress(?:\/|$))/.test(url)) {
     sessionStorage.removeItem('teamToken');
     window.dispatchEvent(new CustomEvent('team-session-ended', { detail: error.response.data?.error }));
   }

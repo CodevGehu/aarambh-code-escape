@@ -9,9 +9,14 @@ const previewQuestions = () => puzzleQuestions.map(question => ({ ...question,
   _id: `preview-${question.set_id}-${question.level}` }));
 
 function getPuzzles(req, res) {
-  res.json({ questions: previewQuestions().map(question => ({ _id: question._id,
+  const setId = req.query?.set_id;
+  if (setId && !['L1', 'L2', 'L3'].includes(setId)) return res.status(400).json({ error: 'Choose Set 1, 2 or 3.' });
+  const early = setId ? require('./earlyRehearsalController').previewQuestions().filter(q => q.set_id === setId)
+    .map(question => ({ _id: question._id, set_id: question.set_id, level: question.level, question_text: question.question_text,
+      puzzle_type: question.puzzle_type, rehearsal_required: true, puzzle: null })) : [];
+  res.set('Cache-Control', 'private, no-store').json({ questions: [...early, ...previewQuestions().filter(q => !setId || q.set_id === setId).map(question => ({ _id: question._id,
     set_id: question.set_id, level: question.level, question_text: question.question_text,
-    puzzle: visiblePuzzle(question, previewTeam) })) });
+    puzzle: visiblePuzzle(question, previewTeam) }))].sort((a,b) => a.level - b.level) });
 }
 
 function discoverPuzzle(req, res) {

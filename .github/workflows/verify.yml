@@ -37,6 +37,10 @@ jobs:
         run: node server/scripts/strict-workflow-smoke.js
         env:
           GAME_SMOKE_REPORT: strict-workflow-report.json
+      - name: Organizer authentication and booklet access controls
+        run: node server/scripts/admin-security-smoke.js
+      - name: Digital early rounds and isolated rehearsal workflows
+        run: node server/scripts/early-round-workflow-smoke.js
       - name: Interactive puzzles and transactional question installation
         run: node server/scripts/interactive-workflow-smoke.js
         env:
@@ -49,7 +53,7 @@ jobs:
             strict-workflow-report.json
             interactive-workflow-report.json
           if-no-files-found: ignore
-      - name: Event notice tests
-        run: node --test client/tests/eventNotice.test.js client/tests/packingImport.test.js
+      - name: Client state and import tests
+        run: node --test client/tests/*.test.js
       - name: Production build
         run: npm run build

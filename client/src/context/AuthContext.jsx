@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import api from '../lib/api';
+import { clearStorageClues } from '../lib/roundPuzzles';
 
 const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
@@ -18,6 +19,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let active = true;
     const onSessionEnded = event => {
+      clearStorageClues();
       setUser(null); setTeam(null); setEvent(null);
       setError(event.detail || 'Your team session has ended. Please sign in again.');
     };
@@ -41,6 +43,7 @@ export function AuthProvider({ children }) {
   const signOut = async () => {
     try {
       await api.post('/auth/logout'); sessionStorage.removeItem('teamToken');
+      clearStorageClues();
       setUser(null); setTeam(null); setEvent(null); setError(null);
     } catch (err) {
       if (err.response?.status !== 401) setError(err.response?.data?.error || 'Unable to sign out. Please try again.');

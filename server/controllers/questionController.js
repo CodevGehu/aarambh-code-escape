@@ -8,6 +8,8 @@ const { getPuzzle, validateDiscovery } = require('../services/interactivePuzzles
 const { visiblePuzzle, discoveryRequired, discoveryUnlocked } = require('../services/puzzleDiscovery');
 const { sendPackingTool } = require('../services/packingTool');
 const { writeActivity } = require('../services/activityLog');
+const { isEarly, publicPuzzle } = require('../services/earlyRoundPuzzles');
+const { withCurrentPuzzle } = require('../services/earlyRoundContext');
 
 // GET /api/questions/:level
 //
@@ -103,7 +105,13 @@ const getQuestion = async (req, res) => {
     }
 
     // 8. NEVER return correct_answer — it only lives on the server
-    const puzzle = visiblePuzzle(question, team, mapping);
+    let puzzle;
+    if (isEarly(question)) {
+      if (levelNum !== team.current_level) return res.status(409).json({ error: 'Only your current round is available.', code: 'PROGRESS_CONFLICT' });
+      req.params.questionId = String(question._id);
+      puzzle = await withCurrentPuzzle(req, async ({ question: current, document }) => publicPuzzle(current, document));
+      res.set('Cache-Control', 'private, no-store');
+    } else puzzle = visiblePuzzle(question, team, mapping);
     res.json({
       event: getEventState(state),
       round: getRoundState(team, state),
@@ -117,6 +125,7 @@ const getQuestion = async (req, res) => {
     });
 
   } catch (error) {
+    if (error.status) return res.status(error.status).json({ error: error.message, code: error.code });
     if (error.code === 'QUESTION_SET_CONFIGURATION') {
       return res.status(503).json({ error: 'Question sets need organizer attention before play can continue.' });
     }

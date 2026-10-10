@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import '../../styles/PuzzleWorkbench.css';
 import { importPackingLayout } from '../../lib/packingImport';
+import { EARLY_TYPES, roundDraft } from '../../lib/roundPuzzles';
+import EarlyRoundWorkbench from './EarlyRoundWorkbench';
 
 const TITLES = { fence:'Fence laboratory', packing:'Polygon packing studio', sliding:'Cargo bay', machine:'Permutation machine', courier:'Courier controller', fold:'Fold and cut studio', shadow:'Projection table' };
 const COLORS = ['#5b19d1','#ff4ac0','#255719','#bd5c00','#06777f','#7b425e'];
 export function initialPuzzleSubmission(puzzle) {
+  if (EARLY_TYPES.has(puzzle.type)) return roundDraft(puzzle);
   const base = { instance_id:puzzle.instance_id };
   if(puzzle.locked) return base;
   switch (puzzle.type) {
@@ -19,6 +22,7 @@ export function initialPuzzleSubmission(puzzle) {
   }
 }
 export function restorePuzzleSubmission(puzzle,raw) {
+  if (EARLY_TYPES.has(puzzle.type)) return roundDraft(puzzle,raw);
   const fresh=initialPuzzleSubmission(puzzle);
   if(puzzle.locked) return fresh;
   if (!raw || typeof raw!=='object' || raw.instance_id!==puzzle.instance_id) return fresh;
@@ -49,7 +53,7 @@ function Research({ puzzle }) {
     {helper && <><Button onClick={() => setHelperOpen(value => !value)} aria-expanded={helperOpen}>{helperOpen ? 'Hide research hint' : 'Reveal research hint'}</Button>{helperOpen && <p className="puzzle-helper">{helper}</p>}</>}
   </details>;
 }
-export default function PuzzleWorkbench({ puzzle,draft,onChange,onDiscover,onDownloadTool,disabled=false }) {
+export default function PuzzleWorkbench({ puzzle,draft,onChange,onDiscover,onDownloadTool,onAction,onArtifact,disabled=false }) {
   const history = useRef([]);
   const [,setHistoryVersion] = useState(0);
   useEffect(() => { history.current=[]; setHistoryVersion(0); },[puzzle.instance_id]);
@@ -57,6 +61,7 @@ export default function PuzzleWorkbench({ puzzle,draft,onChange,onDiscover,onDow
   function change(next) { if (disabled) return; history.current.push(current); if (history.current.length>250) history.current.shift(); onChange({ ...next,instance_id:puzzle.instance_id }); setHistoryVersion(value => value+1); }
   function undo() { if (disabled || !history.current.length) return; onChange(history.current.pop()); setHistoryVersion(value => value+1); }
   const props = { puzzle,draft:current,onChange:change,onDownloadTool,disabled };
+  if (EARLY_TYPES.has(puzzle.type)) return <EarlyRoundWorkbench puzzle={puzzle} draft={current} onChange={onChange} onAction={onAction} onArtifact={onArtifact} disabled={disabled}/>;
   if(puzzle.locked) return <DiscoveryGate key={puzzle.instance_id} puzzle={puzzle} onDiscover={onDiscover} disabled={disabled} />;
   const panels = { fence:Fence,packing:Packing,sliding:Sliding,machine:Machine,courier:Courier,fold:Fold,shadow:Shadow };
   const Panel = panels[puzzle.type];

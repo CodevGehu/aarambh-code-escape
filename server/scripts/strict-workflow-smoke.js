@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 async function run() {
   for (const key of Object.keys(process.env)) {
-    if (/^(MONGODB_URI|JWT_|ADMIN_PASSWORD|AARAMBH_INTEGRATION_SECRET|SMTP_|GMAIL_|CLOUDINARY_)/.test(key)) delete process.env[key];
+    if (/^(MONGODB_URI|JWT_|ADMIN_PASSWORD|EARLY_ROUND_SECRET|AARAMBH_INTEGRATION_SECRET|SMTP_|GMAIL_|CLOUDINARY_)/.test(key)) delete process.env[key];
   }
   const memoryModule = process.env.AARAMBH_TEST_MEMORY_SERVER || require.resolve('mongodb-memory-server');
   const { MongoMemoryReplSet } = require(memoryModule);

@@ -2,6 +2,8 @@
 
 Prepared 5 October 2026 for the organizer and the implementing ChatGPT agent.
 
+**Implemented 10 October 2026:** see [the release notes](rounds-1-3-release.md) for the delivered flow and current organizer decisions. Round two is entirely digital, and the answer booklet requires organizer authentication without a separate booklet password. The text below preserves the original handoff and its alternatives.
+
 ## Purpose and scope
 
 Integrate the supplied round concepts into the existing Aarambh Code Escape website. Create three aligned question sets for rounds 1, 2 and 3, give participants the necessary interactive workbenches, organize admin rehearsal by set, and add an answer booklet served only after organizer authentication.

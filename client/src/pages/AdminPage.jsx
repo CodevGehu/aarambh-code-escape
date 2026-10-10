@@ -61,6 +61,18 @@ export default function AdminPage() {
     setError(err.response?.data?.error || 'Unable to reach the event server. Check your connection and refresh.');
   }, []);
 
+  async function signOut() {
+    if (busy) return;
+    setBusy('signout');setError('');
+    try {
+      await api.post('/admin/logout');
+      sessionStorage.removeItem('adminToken');
+      window.dispatchEvent(new Event('admin-session-ended'));
+      setAuthenticated(false);
+    } catch (err) { handleFailure(err); }
+    finally { setBusy(''); }
+  }
+
   const refresh = useCallback(async () => {
     if (refreshing.current) return;
     refreshing.current = true;
@@ -188,7 +200,7 @@ export default function AdminPage() {
 
   return (
     <main className="event-admin" id="admin-page">
-      <header className="admin-topbar"><a href="/" className="admin-brand">aarambh <span>4.0</span></a><div><a href="/admin/puzzles" className="admin-button small">Try new puzzles</a><span className="admin-update">{updatedAt ? `Updated ${dateTime(updatedAt)} IST` : 'Connecting…'}</span><button className="admin-button small" onClick={() => { sessionStorage.removeItem('adminToken'); setAuthenticated(false); }}>Sign out</button></div></header>
+      <header className="admin-topbar"><a href="/" className="admin-brand">aarambh <span>4.0</span></a><div><a href="/admin/puzzles" className="admin-button small">Puzzle rehearsal</a><a href="/admin/answer-booklet" className="admin-button small">Answer booklet</a><span className="admin-update">{updatedAt ? `Updated ${dateTime(updatedAt)} IST` : 'Connecting…'}</span><button className="admin-button small" disabled={!!busy} onClick={signOut}>Sign out</button></div></header>
       <div className="admin-shell">
         <div className="admin-heading"><div><h1>Code escape.<br />Control room.</h1><p>Five rounds. One shared deadline. Every move recorded.</p></div><div className={`admin-event-clock ${status === 'active' ? 'live' : ''}`}><span>{status === 'active' ? 'Event time remaining' : status === 'ended' ? 'Event ended' : 'Event duration'}</span><strong>{status === 'ended' ? '00:00' : clock(eventRemaining)}</strong><span>{readable(status)}</span></div></div>
         {error && <div className="admin-error" role="alert">{error}<button className="admin-button small" onClick={refresh}>Refresh</button></div>}
