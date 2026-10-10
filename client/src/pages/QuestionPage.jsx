@@ -87,6 +87,7 @@ function QuestionRoundPage() {
       if (!res.data.success) throw new Error('Your action was not accepted. Please retry.');
       acceptSnapshot(res.data);
       if (kind === 'continue') {
+        if (!question) setRetry(value => value + 1);
         setFeedback({ type:'success', text:'Overtime enabled. You can keep answering; the reward decreases until you solve or skip.' });
       } else {
         if (question?.puzzle) {
