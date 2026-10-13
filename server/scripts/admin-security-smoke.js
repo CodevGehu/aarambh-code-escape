@@ -18,6 +18,7 @@ async function run() {
       JWT_TEAM_SECRET: 'loopback-participant-key-not-for-production',
       JWT_ADMIN_SECRET: 'loopback-organizer-key-not-for-production',
       EARLY_ROUND_SECRET: 'loopback-private-round-key-not-for-production',
+      AARAMBH_REGISTRATION_REQUIRED: 'false',
       ADMIN_PASSWORD: 'LoopbackOnlyOrganizer!1234567890' });
     await mongoose.connect(uri);
     const app = require('../app');
@@ -60,6 +61,49 @@ async function run() {
     const privateBooklet = await request(selectedBooklet, 200, { token: organizer.token });
     equal(privateBooklet.rounds.length, 1); equal(privateBooklet.rounds[0].answer, privateData.passphrase);
     equal(privateBooklet.rounds[0].corrected_source, privateData.corrected);
+    // Use an actual signed-in team, not only a malformed or forged token.
+    const Team = require('../models/Team');
+    const { hashAccessCode } = require('../services/accessCodes');
+    await Team.create({ team_name: 'Organizer isolation test', leader_name: 'Loopback leader',
+      email: 'organizer-isolation@example.test', question_set_id: 'L1',
+      access_code_hash: await hashAccessCode('LoopbackTeamAccess!123') });
+    const signedInTeam = await request('/api/auth/login', 200, { method: 'POST',
+      body: { email: 'organizer-isolation@example.test', accessCode: 'LoopbackTeamAccess!123' } });
+    await request('/api/auth/me', 200, { token: signedInTeam.token });
+    const protectedRoutes = [
+      ['/api/admin/verify'], ['/api/admin/teams'], ['/api/admin/logs'], ['/api/admin/logs/export'],
+      ...['L1', 'L2', 'L3'].flatMap(setId => [
+        [`/api/admin/puzzles?set_id=${setId}`], [`/api/admin/answer-booklet?set_id=${setId}`],
+        [`/api/admin/puzzles/preview-${setId}-4/check`, 'POST'],
+        [`/api/admin/puzzles/preview-${setId}-4/discover`, 'POST'],
+        [`/api/admin/puzzles/preview-${setId}-4/reference-check`, 'POST'],
+        [`/api/admin/puzzles/preview-${setId}-5/tool`, 'POST']
+      ]),
+      [selectedBooklet], ['/api/admin/rehearsals', 'POST'],
+      ...['signal', 'repair', 'probe', 'check', 'reference-check'].map(action =>
+        [`/api/admin/rehearsals/${rehearsal._id}/${action}`, 'POST']),
+      ...['broken-svg', 'photo-2'].map(artifact =>
+        [`/api/admin/rehearsals/${rehearsal._id}/artifacts/${artifact}?instance_id=${instanceId}`]),
+      ['/api/quiz/config'], ['/api/quiz/config', 'PATCH'],
+      ...['start', 'end', 'reset'].map(action => [`/api/quiz/${action}`, 'POST']),
+      ['/api/export/excel'], ['/api/admin/logout', 'POST']
+    ];
+    const before = JSON.stringify(await Promise.all([
+      Team.find({}).lean(), mongoose.connection.db.collection('quizstates').find({}).toArray(),
+      mongoose.connection.db.collection('eventlogs').find({}).toArray(), PuzzleRehearsal.find({}).select('+private_data').lean()
+    ]));
+    for (const token of [undefined, signedInTeam.token, participant]) {
+      for (const [route, method = 'GET'] of protectedRoutes) {
+        const rejected = await request(route, 401, { token, method,
+          ...(method !== 'GET' ? { body: { question_id: question._id, instance_id: instanceId,
+            source: privateData.corrected, marker: privateData.marker } } : {}) });
+        equal(Object.keys(rejected), ['error'], 'Rejected organizer requests must contain no answers or controls');
+      }
+    }
+    equal(JSON.stringify(await Promise.all([
+      Team.find({}).lean(), mongoose.connection.db.collection('quizstates').find({}).toArray(),
+      mongoose.connection.db.collection('eventlogs').find({}).toArray(), PuzzleRehearsal.find({}).select('+private_data').lean()
+    ])), before, 'Participant attempts must not mutate event, scores, logs or rehearsal state');
     await request(`/api/admin/answer-booklet?set_id=L2&level=2&rehearsal_id=${rehearsal._id}`, 409, { token: organizer.token });
     await PuzzleRehearsal.updateOne({ _id: rehearsal._id }, { $set: { owner: 'another-organizer-session' } });
     await request(selectedBooklet, 404, { token: organizer.token });

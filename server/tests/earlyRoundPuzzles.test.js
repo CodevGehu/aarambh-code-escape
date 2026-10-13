@@ -26,6 +26,25 @@ test('private generation is instance/team/run-bound and fails closed without a s
   assert.throws(() => e.generatePrivate(q, team, 'id'), /unavailable/); process.env.EARLY_ROUND_SECRET = saved;
 });
 for (const setId of ['L1','L2','L3']) {
+  test(`${setId}: booklet fixes Image 1 and distinguishes its marker from Photograph 2 answer`, () => {
+    const q = e.earlyQuestions.find(q => q.set_id === setId && q.level === 2), d = documentFor(q);
+    const guide = e.reference(q, d), participant = e.publicPuzzle(q, d);
+    assert.equal(guide.broken_source, participant.source, 'Guide starts with the exact participant Image 1');
+    assert.throws(() => e.canonicalSvg(guide.broken_source), /Invalid XML/);
+    assert.equal(e.validateRepair(d, guide.corrected_source, guide.marker), true, 'Booklet correction repairs the first image');
+    assert.equal(guide.repairs.length, 3);
+    assert.notEqual(guide.marker, guide.answer, 'Marker is not the final passphrase');
+    assert.throws(() => e.artifact(d, 'photo-2'), /before/);
+    assert.equal(e.validateEarly(q, d, guide.reference_submission).valid, false, 'Knowing the final answer does not skip Image 1');
+    d.stage = 'unlocked';
+    const photo = e.artifact(d, 'photo-2'), tiff = photo.bytes.subarray(12);
+    assert.equal(jpeg.decode(photo.bytes).width, 320, 'Photograph 2 is a separate valid JPEG');
+    assert.equal(tiff.readUInt16LE(10), 0x013b, 'Final answer is in EXIF Artist');
+    const offset = tiff.readUInt32LE(18), length = tiff.readUInt32LE(14);
+    assert.equal(tiff.subarray(offset, offset + length - 1).toString(), guide.answer);
+    assert.equal(e.validateEarly(q, d, guide.reference_submission).valid, true);
+    assert.equal(e.validateEarly(q, d, { ...guide.reference_submission, code: guide.marker }).valid, false);
+  });
   test(`${setId}: SVG begins malformed, reference repair passes, every fault must be restored`, () => {
     const q = e.earlyQuestions.find(q => q.set_id === setId && q.level === 2), d = documentFor(q);
     assert.throws(() => e.canonicalSvg(d.private_data.source), /Invalid XML/);

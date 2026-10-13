@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import QuestionPage from './pages/QuestionPage';
@@ -43,8 +44,8 @@ export default function App() {
               via optional chaining (team?.team_name). */}
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/admin" element={<AdminPage />} />
-          <Route path="/admin/puzzles" element={<PuzzleLabPage />} />
-          <Route path="/admin/answer-booklet" element={<AnswerBookletPage />} />
+          <Route path="/admin/puzzles" element={<ProtectedAdminRoute><PuzzleLabPage /></ProtectedAdminRoute>} />
+          <Route path="/admin/answer-booklet" element={<ProtectedAdminRoute><AnswerBookletPage /></ProtectedAdminRoute>} />
           <Route path="*" element={<ErrorPage />} />
         </Routes>
       </AuthProvider>
