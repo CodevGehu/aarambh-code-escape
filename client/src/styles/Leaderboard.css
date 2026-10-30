@@ -43,8 +43,36 @@
 .rankings-shoutout { position:fixed; z-index:40; left:50%; bottom:24px; transform:translateX(-50%); display:flex; align-items:center; gap:18px; width:max-content; max-width:calc(100% - 40px); padding:20px 28px; background:var(--purple); color:white; border:2px solid var(--ink); border-radius:6px; box-shadow:4px 4px 0 var(--ink); pointer-events:none; font-size:clamp(1rem,2vw,1.55rem); }
 .rankings-shoutout strong { color:var(--lime); margin-right:.2em; }
 .rankings-shoutout svg { flex:none; }
+.rankings-rounds i.is-skipped { background:#bcb7ad; border-color:#8d887f; }
+.rankings-podium { list-style:none; margin:0 0 22px; padding:0; display:grid; grid-template-columns:1.2fr 1fr 1fr; gap:16px; align-items:end; }
+.rankings-podium-card { display:grid; gap:8px; background:white; border:2px solid var(--ink); border-radius:6px; box-shadow:4px 4px 0 var(--ink); padding:20px 22px; min-width:0; }
+.rankings-podium-card.place-1 { background:var(--lime); padding:26px 24px; box-shadow:6px 6px 0 var(--purple); }
+.rankings-podium-rank { display:flex; align-items:center; gap:7px; font-weight:800; font-size:1rem; color:#5b5652; }
+.place-1 .rankings-podium-rank { color:var(--ink); }
+.rankings-podium-team { font-size:clamp(1.25rem,2.2vw,1.8rem); line-height:1.15; overflow-wrap:anywhere; }
+.rankings-podium-points { font-size:clamp(1.9rem,3.2vw,2.8rem); font-weight:800; line-height:1; font-variant-numeric:tabular-nums; }
+.rankings-podium-points small { font-size:.9rem; font-weight:600; }
+.rankings-podium-meta { font-size:.8rem; font-weight:700; border-top:1px solid rgba(17,17,17,.2); padding-top:8px; }
+.rankings-session { display:block; margin-top:3px; font-size:.75rem; font-weight:500; color:#5b5652; }
+.rankings-table.is-admin .rankings-team { width:30%; }
+.rankings-set { font-weight:700; white-space:nowrap; }
+.rankings-state { display:inline-block; font-size:.8rem; font-weight:700; padding:3px 8px; border:1px solid var(--ink); border-radius:4px; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.tone-live { background:#efe9fc; } .tone-overtime { background:#ffe0e8; color:#85102b; } .tone-decision { background:#ffd27a; }
+.tone-done { background:var(--lime); } .tone-idle { background:transparent; border-color:#bcb7ad; color:#5b5652; }
+.rankings-podium-meta.tone-live,.rankings-podium-meta.tone-overtime,.rankings-podium-meta.tone-decision,.rankings-podium-meta.tone-done,.rankings-podium-meta.tone-idle { background:transparent; border-color:rgba(17,17,17,.2); color:inherit; }
+.rankings-voice.is-on { background:var(--purple); color:white; border-color:var(--ink); }
+.rankings-empty { margin-top:10px; }
+.rankings-shoutout.kind-first,.rankings-shoutout.kind-lead,.rankings-shoutout.kind-finish { background:var(--ink); }
+.rankings-display .rankings-podium-team { font-size:clamp(1.5rem,2.6vw,2.6rem); }
+.rankings-display .rankings-podium-points { font-size:clamp(2.2rem,3.6vw,3.6rem); }
+.milestone-confetti { position:fixed; inset:0; z-index:39; pointer-events:none; overflow:hidden; }
+.milestone-confetti i { position:absolute; top:-20px; display:block; opacity:.95; animation-name:milestone-fall; animation-timing-function:cubic-bezier(.25,.6,.45,1); animation-fill-mode:forwards; }
+@keyframes milestone-fall { 0% { transform:translate(0,0) rotate(0); opacity:1; } 85% { opacity:1; } 100% { transform:translate(var(--drift),105vh) rotate(var(--spin)); opacity:0; } }
+@media (prefers-reduced-motion:reduce) { .milestone-confetti { display:none; } }
 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 @media(max-width:760px) {
+  .rankings-podium { grid-template-columns:1fr; }
+  .rankings-table.is-admin { min-width:860px; }
   .rankings-heading { align-items:flex-start; flex-direction:column; gap:14px; }
   .rankings-table th,.rankings-table td { padding:16px 14px; }
   .rankings-table { min-width:620px; }

@@ -99,3 +99,11 @@
 .admin-end-dialog .admin-error { margin-top: 18px; }
 .admin-dialog-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 14px; margin-top: 26px; }
 @media (max-width: 600px) { .admin-ended { align-items: flex-start; flex-wrap: wrap; padding: 18px; } .admin-ended > div { flex-basis: calc(100% - 46px); } .admin-end-dialog { padding: 22px; } .admin-dialog-actions .admin-button { white-space: normal; width: 100%; } }
+.admin-tabs { display: flex; gap: 0; margin: 0 0 26px; border-bottom: 3px solid #111; }
+.admin-tabs button { display: inline-flex; align-items: center; gap: 8px; background: transparent; color: #111; border: 3px solid transparent; border-bottom: 0; margin-bottom: -3px; padding: 12px 20px; font: inherit; font-weight: 800; font-size: .95rem; cursor: pointer; }
+.admin-tabs button:hover { background: #e4ded3; }
+.admin-tabs button.active { background: #fff; border-color: #111; box-shadow: 0 -4px 0 #b8ff38 inset; }
+.admin-leaderboard-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.admin-leaderboard-actions a { text-decoration: none; }
+.admin-leaderboard .rankings-podium { margin-top: 6px; }
+.admin-leaderboard-note { margin-top: 18px !important; font-size: .8rem; color: #5b5652; }

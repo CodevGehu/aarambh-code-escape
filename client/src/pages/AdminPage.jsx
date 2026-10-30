@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Activity, ArrowLeft, Download, LockKeyhole, Play, RefreshCw, Settings2, Square, X } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Activity, ArrowLeft, Download, LayoutDashboard, LockKeyhole, Play, RefreshCw, Settings2, Square, Trophy, X } from 'lucide-react';
+import AdminLeaderboard from '../components/AdminLeaderboard';
 import api from '../lib/api';
 import '../styles/AdminPage.css';
 
@@ -38,6 +40,9 @@ export default function AdminPage() {
   const [confirmReset, setConfirmReset] = useState(false);
   const refreshing = useRef(false);
   const mounted = useRef(true);
+  const [params, setParams] = useSearchParams();
+  const tab = params.get('tab') === 'leaderboard' ? 'leaderboard' : 'control';
+  const openTab = name => setParams(name === 'control' ? {} : { tab: name }, { replace: true });
 
   useEffect(() => {
     mounted.current = true;
@@ -205,6 +210,12 @@ export default function AdminPage() {
         <div className="admin-heading"><div><h1>Code escape.<br />Control room.</h1><p>Five rounds. One shared deadline. Every move recorded.</p></div><div className={`admin-event-clock ${status === 'active' ? 'live' : ''}`}><span>{status === 'active' ? 'Event time remaining' : status === 'ended' ? 'Event ended' : 'Event duration'}</span><strong>{status === 'ended' ? '00:00' : clock(eventRemaining)}</strong><span>{readable(status)}</span></div></div>
         {error && <div className="admin-error" role="alert">{error}<button className="admin-button small" onClick={refresh}>Refresh</button></div>}
         {notice && <p className="admin-notice" role="status">{notice}</p>}
+        <div className="admin-tabs" role="tablist" aria-label="Organizer views">
+          <button role="tab" id="admin-tab-control" aria-selected={tab === 'control'} className={tab === 'control' ? 'active' : ''} onClick={() => openTab('control')}><LayoutDashboard size={17} /> Control room</button>
+          <button role="tab" id="admin-tab-leaderboard" aria-selected={tab === 'leaderboard'} className={tab === 'leaderboard' ? 'active' : ''} onClick={() => openTab('leaderboard')}><Trophy size={17} /> Leaderboard</button>
+        </div>
+        {tab === 'leaderboard' && <div role="tabpanel" aria-labelledby="admin-tab-leaderboard"><AdminLeaderboard teams={teams} status={status} now={serverNow} endedAt={event?.ended_at} /></div>}
+        {tab === 'control' && <div role="tabpanel" aria-labelledby="admin-tab-control">
         {status === 'ended' && <section className="admin-ended" role="status"><Square size={26} aria-hidden="true" /><div><h2>Code Escape has ended</h2><p>Answer submissions are closed for every team. Final scores and team activity are ready to review below.</p>{event?.ended_at && <small>Ended {dateTime(event.ended_at)} IST</small>}</div><button className="admin-button" disabled={Boolean(busy)} onClick={() => download('/export/excel', 'aarambh-results.xlsx')}><Download size={16} /> Download results</button></section>}
         <section className="admin-controls" aria-label="Event controls"><div><strong>{teams.length} teams</strong><span>{teams.filter(team => team.current_level >= 6).length} finished</span><span>{teams.filter(team => team.round?.overtime_ms > 0 && team.current_level < 6).length} in overtime</span></div><div>
           <button className="admin-button" onClick={() => setShowConfig(!showConfig)}><Settings2 size={16} /> {showConfig ? 'Hide rules' : 'Round rules'}</button>
@@ -240,6 +251,7 @@ export default function AdminPage() {
           {!logs.logs.length && <p className="admin-empty">No activity matches these filters. Team sign-ins and event actions will appear here.</p>}
           <div className="admin-pagination"><button className="admin-button small" disabled={logs.page <= 1} onClick={() => setFilters(current => ({ ...current, page: Math.max(1, current.page - 1) }))}>Previous</button><span>Page {logs.page} of {logs.pages}</span><button className="admin-button small" disabled={logs.page >= logs.pages} onClick={() => setFilters(current => ({ ...current, page: current.page + 1 }))}>Next</button></div>
         </section>
+        </div>}
       </div>
       {confirmEnd && <dialog ref={endDialog} className="admin-end-dialog" aria-labelledby="end-event-title" aria-describedby="end-event-description" onCancel={e => { if (busy) e.preventDefault(); else setConfirmEnd(false); }} onClose={() => setConfirmEnd(false)}>
         <Square size={30} aria-hidden="true" /><h2 id="end-event-title">End Code Escape for everyone?</h2>
