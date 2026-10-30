@@ -1,9 +1,12 @@
 # Code Escape Room Rulebook
 
-**Venue:** TCL 3/4, 3rd floor, right side  
-**Time:** 8:00 am - 10:00 am
+**Date:** Saturday, 31 October 2026  
+**Time:** 8:00 AM – 10:00 AM IST  
+**Venue:** TCL 3/4, 3rd floor, right side
 
-Please arrive before 8:00 am so that everyone can settle in and we can start on time.
+Please arrive before 8:00 AM so that everyone can settle in and we can start on time.
+
+**Bring your own laptops — ideally one for each member.** Sharing one laptop is allowed, but more laptops let your team chase different leads at the same time: while one person tries one idea, another tests something else, so you cover more ground and improve your chance of solving each room in time.
 
 ## How the event works
 
