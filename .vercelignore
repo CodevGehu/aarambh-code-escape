@@ -1,4 +1,6 @@
 .git
+.playwright-cli
+.playwright-cli/**
 .private
 .private/**
 **/.private/**

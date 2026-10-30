@@ -41,6 +41,10 @@ jobs:
         run: node server/scripts/admin-security-smoke.js
       - name: Digital early rounds and isolated rehearsal workflows
         run: node server/scripts/early-round-workflow-smoke.js
+      - name: Google team members and concurrent shared progress
+        run: node server/scripts/member-auth-smoke.js
+      - name: Paid CSV roster and stable balanced set allocation
+        run: node server/scripts/attendee-import-smoke.js
       - name: Interactive puzzles and transactional question installation
         run: node server/scripts/interactive-workflow-smoke.js
         env:

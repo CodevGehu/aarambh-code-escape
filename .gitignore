@@ -11,3 +11,4 @@ dist/
 
 .vercel
 __pycache__/
+.playwright-cli/

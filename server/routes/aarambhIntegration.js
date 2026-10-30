@@ -70,7 +70,8 @@ async function synchronize(payload) {
         // Do not replace scores, assignments, timers or histories during roster synchronization.
         const update = { aarambh_registration_id: payload.registration_id, access_enabled: true,
           team_name: payload.team_name, leader_name: payload.leader_name, email: payload.email, members: payload.members };
-        if (changedCode) Object.assign(update, { access_code_hash: newHash, active_session_id: null });
+        if (changedCode) Object.assign(update, { access_code_hash: newHash, active_session_id: null,
+          ...(team.registered_members?.length ? { 'registered_members.$[].active_session_id': null } : {}) });
         await Team.updateOne({ _id: team._id }, { $set: update }, { session, timestamps: false });
       } else {
         const active = getEventState(state).status === 'active';
@@ -81,7 +82,8 @@ async function synchronize(payload) {
             event_run_id: state.run_id, event_open: true, score_reached_at: state.started_at } : {}) }], { session });
       }
     } else if (team) {
-      await Team.updateOne({ _id: team._id }, { $set: { access_enabled: false, active_session_id: null },
+      await Team.updateOne({ _id: team._id }, { $set: { access_enabled: false, active_session_id: null,
+        ...(team.registered_members?.length ? { 'registered_members.$[].active_session_id': null } : {}) },
         $inc: { progress_version: 1 } }, { session, timestamps: false });
     }
     await Enrollment.updateOne({ _id: payload.registration_id }, { $set: { version: payload.version,

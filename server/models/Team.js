@@ -1,5 +1,13 @@
 const mongoose = require('mongoose');
 
+const registeredMemberSchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true },
+  email: { type: String, required: true, lowercase: true, trim: true },
+  is_leader: { type: Boolean, default: false },
+  google_subject: { type: String, default: null, select: false },
+  active_session_id: { type: String, default: null, select: false }
+}, { _id: false });
+
 const teamSchema = new mongoose.Schema({
   team_name: {
     type: String,
@@ -22,6 +30,7 @@ const teamSchema = new mongoose.Schema({
     type: [String],
     default: []
   },
+  registered_members: { type: [registeredMemberSchema], default: [] },
   question_set_id: {
     type: String,
     default: null
@@ -32,6 +41,7 @@ const teamSchema = new mongoose.Schema({
   },
   access_code_hash: { type: String, select: false },
   active_session_id: { type: String, default: null, select: false },
+  google_subject: { type: String, default: null, select: false },
   aarambh_registration_id: { type: String },
   access_enabled: { type: Boolean, default: true },
   event_run_id: { type: String, default: null },
@@ -68,4 +78,5 @@ const teamSchema = new mongoose.Schema({
 
 teamSchema.index({ aarambh_registration_id: 1 }, { unique: true,
   partialFilterExpression: { aarambh_registration_id: { $type: 'string' } } });
+teamSchema.index({ 'registered_members.email': 1 });
 module.exports = mongoose.model('Team', teamSchema);

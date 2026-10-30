@@ -239,6 +239,8 @@ test('team middleware rejects admin tokens, wrong audience, expired tokens, and 
   const f = await fixture();
   const tokens = [
     jwt.sign({ isAdmin: true }, secret),
+    jwt.sign({ role: 'team', sid: '' }, secret, { subject: f.team._id, issuer: 'aarambh-code-escape', audience: 'participant' }),
+    jwt.sign({ role: 'team', sid: 'x', member_email: '' }, secret, { subject: f.team._id, issuer: 'aarambh-code-escape', audience: 'participant' }),
     jwt.sign({ role: 'team', sid: 'x' }, secret, { subject: f.team._id, issuer: 'aarambh-code-escape', audience: 'admin' }),
     jwt.sign({ role: 'team', sid: 'x' }, secret, { subject: f.team._id, issuer: 'aarambh-code-escape', audience: 'participant', expiresIn: -1 })
   ];

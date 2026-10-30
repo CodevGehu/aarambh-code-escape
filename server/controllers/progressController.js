@@ -10,6 +10,7 @@ const { discoveryUnlocked } = require('../services/puzzleDiscovery');
 const { isEarly, validateEarly } = require('../services/earlyRoundPuzzles');
 const { consumeAnswerAttempt } = require('./earlyRoundController');
 const { withCurrentPuzzle } = require('../services/earlyRoundContext');
+const { teamSessionFilter } = require('../services/teamSessions');
 const normalize = value => value.toLowerCase().trim().replace(/\s+/g, ' ');
 const reply = (res, team, state, extra = {}, now = new Date()) => res.json({ success: true,
   team: publicTeam(team, state, now), event: getEventState(state, now), ...extra });
@@ -43,7 +44,7 @@ function casFilter(team, state, req) {
     progress_version: team.progress_version || 0,
     ...(state.run_id ? { event_run_id: state.run_id } : {}),
     event_open: true,
-    ...(req.user.sessionId ? { active_session_id: req.user.sessionId } : {}),
+    ...teamSessionFilter(req.user),
     $expr: { $lt: ['$$NOW', event.deadline] } };
 }
 const conflict = res => res.status(409).json({ error: 'Progress already changed or the event ended. Refresh your team.', code: 'PROGRESS_CONFLICT' });

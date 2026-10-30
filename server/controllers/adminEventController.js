@@ -48,7 +48,7 @@ function pageNumber(value, fallback, max) {
 async function getTeams(req, res) {
   try {
     const [teams, state, activities] = await Promise.all([
-      Team.find(rosterFilter({ includeRevoked: true })).select('+active_session_id').lean(),
+      Team.find(rosterFilter({ includeRevoked: true })).select('+active_session_id +registered_members.active_session_id').lean(),
       QuizState.findOne({ key: 'global' }),
       EventLog.aggregate([
         { $match: { team_id: { $ne: null } } }, { $sort: { timestamp: -1, _id: -1 } },
@@ -63,7 +63,7 @@ async function getTeams(req, res) {
     res.json({
       teams: teams.map(team => ({ ...publicTeam(team, state, now),
         rank: ranks.get(String(team._id)) || null, access_enabled: team.access_enabled !== false,
-        session_active: Boolean(team.active_session_id),
+        session_active: Boolean(team.active_session_id || team.registered_members?.some(member => member.active_session_id)),
         score_reached_at: team.score_reached_at || null,
         last_activity: lastActivity.get(String(team._id)) || null })),
       event: getEventState(state, now)

@@ -12,7 +12,8 @@ export function AuthProvider({ children }) {
   const acceptSnapshot = useCallback(snapshot => {
     if (snapshot.team) {
       setTeam(snapshot.team);
-      setUser({ id: snapshot.team._id, email: snapshot.team.email });
+      setUser(current => ({ id: snapshot.team._id, email: snapshot.participant?.email ||
+        (current?.id === snapshot.team._id ? current.email : snapshot.team.email) }));
     }
     if (snapshot.event) setEvent(snapshot.event);
   }, []);
@@ -40,6 +41,15 @@ export function AuthProvider({ children }) {
     } catch (err) { setError(err.response?.data?.error || 'Sign-in failed. Please try again.'); }
     finally { setLoading(false); }
   };
+  const signInGoogle = useCallback(async credential => {
+    setError(null); setLoading(true);
+    try {
+      const res = await api.post('/auth/google', { credential });
+      sessionStorage.setItem('teamToken', res.data.token);
+      acceptSnapshot(res.data);
+    } catch (err) { setError(err.response?.data?.error || 'Google sign-in failed. Please try again.'); }
+    finally { setLoading(false); }
+  }, [acceptSnapshot]);
   const signOut = async () => {
     try {
       await api.post('/auth/logout'); sessionStorage.removeItem('teamToken');
@@ -57,7 +67,7 @@ export function AuthProvider({ children }) {
       return null;
     }
   }, [acceptSnapshot]);
-  return <AuthContext.Provider value={{ user, team, event, loading, error, signIn, signOut, refreshTeam, acceptSnapshot, setError }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, team, event, loading, error, signIn, signInGoogle, signOut, refreshTeam, acceptSnapshot, setError }}>{children}</AuthContext.Provider>;
 }
 export const useAuth = () => {
   const context = useContext(AuthContext);

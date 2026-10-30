@@ -108,11 +108,14 @@ test('local replica-set registration synchronization', { skip: !process.env.AARA
     }
     assert.equal(await Team.countDocuments(), 0);
     await synchronize(validatePayload(payload({ version: 3 })));
-    await Team.updateOne({}, { $set: { active_session_id: 'session', total_points: 100 } });
+    await Team.updateOne({}, { $set: { active_session_id: 'session', total_points: 100,
+      registered_members: [{ name: 'Member', email: 'member@example.test', active_session_id: 'google-member-session', google_subject: 'verified-google-subject' }] } });
     await synchronize(validatePayload(payload({ status: 'revoked', version: 3 })));
-    const team = await Team.findOne().select('+active_session_id').lean();
+    const team = await Team.findOne().select('+active_session_id +registered_members.active_session_id +registered_members.google_subject').lean();
     assert.equal(team.access_enabled, false); assert.equal(team.active_session_id, null);
     assert.equal(team.total_points, 100); assert.equal(team.progress_version, 1);
+    assert.equal(team.registered_members[0].active_session_id, null, 'Refund revokes member sessions as well as the leader');
+    assert.equal(team.registered_members[0].google_subject, 'verified-google-subject', 'Refund does not transfer a member identity');
   });
 
   await t.test('simultaneous duplicate first deliveries create exactly one team and receipt', async () => {
@@ -172,6 +175,7 @@ test('local replica-set registration synchronization', { skip: !process.env.AARA
       const board = response(); await require('../controllers/leaderboardController').getLeaderboard({}, board);
       assert.equal(board.statusCode, 200); assert.equal(board.body.leaderboard.length, 3);
       assert.ok(board.body.leaderboard.every(team => team.team_name.startsWith('Paid')));
+      assert.ok(board.body.leaderboard.every(team => team.team_id && team.event_run_id === event.run_id && Array.isArray(team.round_outcomes)));
       const admin = response(); await require('../controllers/adminEventController').getTeams({}, admin);
       assert.equal(admin.statusCode, 200); assert.equal(admin.body.teams.length, 4);
       const refunded = admin.body.teams.find(team => team.team_name === 'Refunded Team');

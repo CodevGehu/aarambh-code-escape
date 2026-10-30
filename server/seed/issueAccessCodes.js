@@ -21,7 +21,8 @@ async function issueAccessCodes() {
   const filename = await savePrivateExport(credentials);
   const result = await Team.bulkWrite(documents.map(team => ({ updateOne: {
     filter: { _id: team._id, ...(!rotate ? { $or: filter.$or } : {}) },
-    update: { $set: { access_code_hash: team.access_code_hash, active_session_id: null } }, timestamps: false
+    update: { $set: { access_code_hash: team.access_code_hash, active_session_id: null,
+      ...(team.registered_members?.length ? { 'registered_members.$[].active_session_id': null } : {}) } }, timestamps: false
   } })));
   console.log(`Issued ${result.modifiedCount} team access codes. Private export: ${filename}`);
   if (result.modifiedCount !== documents.length) throw new Error('Concurrent organizer operation detected. Verify which codes are active before distributing the export.');

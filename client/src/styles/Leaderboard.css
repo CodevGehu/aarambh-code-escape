@@ -1,0 +1,57 @@
+.rankings-main { max-width:1500px; padding-bottom:125px; }
+.rankings-controls,.rankings-screen-controls { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.rankings-controls { justify-content:space-between; }
+.rankings-screen-controls { margin-left:auto; }
+.rankings-heading { display:flex; justify-content:space-between; align-items:flex-end; gap:24px; margin:30px 0; }
+.rankings-heading h1 { font-size:clamp(2.6rem,5vw,4.2rem); }
+.rankings-heading p.muted { margin-top:10px; }
+.rankings-live { display:flex; align-items:center; gap:9px; white-space:nowrap; font-weight:700; }
+.rankings-live > span:last-child { color:#5b5652; border-left:1px solid #bcb7ad; padding-left:12px; margin-left:4px; font-weight:500; }
+.rankings-dot { width:9px; height:9px; border-radius:50%; background:#337127; }
+.rankings-dot.is-offline { background:#ad173c; }
+.rankings-error { margin-bottom:22px; }
+.rankings-search { max-width:420px; margin-bottom:24px; }
+.rankings-search .input { margin-top:8px; }
+.rankings-table { font-variant-numeric:tabular-nums; }
+.rankings-table th,.rankings-table td { padding:20px 22px; }
+.rankings-table thead th { font-size:.85rem; font-weight:500; }
+.rankings-table thead th:nth-child(3),.rankings-table thead th:last-child { text-align:right; }
+.rankings-table tbody th { color:var(--ink); background:white; font-weight:700; white-space:normal; font-size:1.35rem; }
+.rankings-table tbody tr.rank-first th { background:var(--lime); }
+.rankings-table tbody tr:last-child th { border-bottom:0; }
+.rankings-rank { width:90px; font-weight:800; font-size:1.4rem; white-space:nowrap; }
+.rankings-rank svg { margin-right:8px; vertical-align:-2px; }
+.rankings-team { width:47%; overflow-wrap:anywhere; }
+.rankings-points { text-align:right; font-size:1.9rem; line-height:1.15; font-weight:800; }
+.rankings-time { text-align:right; color:#5b5652; white-space:nowrap; }
+.rankings-progress { display:grid; gap:6px; font-size:.85rem; white-space:nowrap; }
+.rankings-rounds { display:flex; gap:5px; }
+.rankings-rounds i { width:13px; height:7px; border:1px solid #b9b5ad; background:#f2efe8; border-radius:2px; }
+.rankings-rounds i.is-settled { background:var(--purple); border-color:var(--purple); }
+.rankings-footer { display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; color:#5b5652; font-size:.8rem; margin-top:16px; }
+.rankings-brand { font-size:1rem; font-weight:700; margin-bottom:8px; }
+.rankings-display .rankings-main { width:calc(100% - 80px); max-width:1800px; padding-top:20px; }
+.rankings-display .rankings-controls .btn { padding:6px 10px; font-size:.75rem; border-width:1px; }
+.rankings-display .rankings-heading { margin:16px 0 28px; }
+.rankings-display .rankings-heading h1 { font-size:clamp(2.6rem,4.2vw,5rem); }
+.rankings-display .rankings-table tbody th { font-size:clamp(1.35rem,2.3vw,2.3rem); }
+.rankings-display .rankings-points { font-size:clamp(2rem,2.9vw,2.9rem); }
+.rankings-display .rankings-rank { font-size:clamp(1.5rem,2.4vw,2.2rem); }
+.rankings-display .rankings-table th,.rankings-display .rankings-table td { padding:clamp(10px,1.2vh,14px) 24px; }
+.rankings-display .rankings-time { font-size:1.15rem; }
+.rankings-display .rankings-progress { font-size:1rem; }
+.rankings-shoutout { position:fixed; z-index:40; left:50%; bottom:24px; transform:translateX(-50%); display:flex; align-items:center; gap:18px; width:max-content; max-width:calc(100% - 40px); padding:20px 28px; background:var(--purple); color:white; border:2px solid var(--ink); border-radius:6px; box-shadow:4px 4px 0 var(--ink); pointer-events:none; font-size:clamp(1rem,2vw,1.55rem); }
+.rankings-shoutout strong { color:var(--lime); margin-right:.2em; }
+.rankings-shoutout svg { flex:none; }
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+@media(max-width:760px) {
+  .rankings-heading { align-items:flex-start; flex-direction:column; gap:14px; }
+  .rankings-table th,.rankings-table td { padding:16px 14px; }
+  .rankings-table { min-width:620px; }
+  .rankings-table .rankings-team { font-size:1.1rem; }
+  .rankings-points { font-size:1.5rem; }
+  .rankings-rank svg { display:none; }
+  .rankings-display .rankings-main { width:calc(100% - 32px); }
+  .rankings-display .rankings-table th,.rankings-display .rankings-table td { padding:16px 14px; }
+  .rankings-shoutout { bottom:16px; padding:16px; gap:12px; }
+}

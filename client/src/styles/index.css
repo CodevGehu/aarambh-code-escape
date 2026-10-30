@@ -75,6 +75,8 @@ table { width:100%; border-collapse:collapse; text-align:left; } th,td { padding
 .login-intro h1 { font-size:clamp(3.5rem,7vw,7rem); line-height:.95; margin:30px 0; max-width:7ch; }
 .login-intro p { max-width:35ch; font-size:1.1rem; } .login-form-area { padding:40px; display:grid; place-items:center; }
 .login-card { width:min(440px,100%); } .login-card h2 { margin-bottom:10px; } .login-card form { display:grid; gap:18px; margin-top:26px; } .login-card .input { margin-top:6px; }
+.google-login { display:grid; gap:16px; margin:28px 0; min-height:48px; }
+.google-login > div[inert] { pointer-events:none; opacity:.6; }
 .login-terminal { padding:18px; background:var(--ink); color:var(--lime); font-size:1.6rem; font-weight:800; display:flex; gap:12px; border:2px solid white; box-shadow:6px 6px 0 var(--pink); width:max-content; }
 .loading-spinner { display:inline-block; width:26px; height:26px; border:3px solid #ccc; border-top-color:var(--purple); border-radius:50%; animation:spin .8s linear infinite; }
 @keyframes spin { to { transform:rotate(360deg); } }
