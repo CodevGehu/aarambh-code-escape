@@ -49,15 +49,18 @@ jobs:
         run: node server/scripts/interactive-workflow-smoke.js
         env:
           INTERACTIVE_SMOKE_REPORT: interactive-workflow-report.json
-      - uses: actions/upload-artifact@v4
+      - name: Client state and import tests
+        run: node --test client/tests/*.test.js
+      - name: Production build
+        run: npm run build
+      - name: Attach optional workflow reports
+        uses: actions/upload-artifact@v4
         if: always()
+        # Report storage can fill independently of the required verification checks.
+        continue-on-error: true
         with:
           name: strict-workflow-report
           path: |
             strict-workflow-report.json
             interactive-workflow-report.json
           if-no-files-found: ignore
-      - name: Client state and import tests
-        run: node --test client/tests/*.test.js
-      - name: Production build
-        run: npm run build
