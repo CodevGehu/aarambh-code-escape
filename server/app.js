@@ -32,7 +32,7 @@ const normalJson = express.json({ limit: '10kb' });
 const repairJson = express.json({ limit: '150kb' });
 app.use((req, res, next) => {
   const isRepair = req.method === 'POST' &&
-    /^\/api\/(?:round-puzzles|admin\/rehearsals)\/[^/]+\/repair\/?$/.test(req.path);
+    /^\/api\/(?:round-puzzles|admin\/rehearsals|practice\/rehearsals)\/[^/]+\/repair\/?$/.test(req.path);
   return (isRepair ? repairJson : normalJson)(req, res, next);
 });
 
@@ -72,6 +72,7 @@ app.use('/api/export', require('./routes/export'));
 app.use('/api/quiz', require('./routes/quiz'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/admin/rehearsals', require('./routes/rehearsals'));
+app.use('/api/practice', require('./routes/practice'));
 app.use('/api', (req, res) => res.status(404).json({ error: 'API endpoint not found.' }));
 app.use((error, req, res, next) => {
   // Raw driver exceptions may contain credentials. Keep logs and responses safe.

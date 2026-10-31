@@ -43,6 +43,8 @@ export default function App() {
               without needing a team login. The Navbar handles null team safely
               via optional chaining (team?.team_name). */}
           <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/practice" element={<ProtectedRoute><PuzzleLabPage practice /></ProtectedRoute>} />
+          <Route path="/practice/answers" element={<ProtectedRoute><AnswerBookletPage practice /></ProtectedRoute>} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/admin/puzzles" element={<ProtectedAdminRoute><PuzzleLabPage /></ProtectedAdminRoute>} />
           <Route path="/admin/answer-booklet" element={<ProtectedAdminRoute><AnswerBookletPage /></ProtectedAdminRoute>} />
