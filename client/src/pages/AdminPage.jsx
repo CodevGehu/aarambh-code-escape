@@ -152,7 +152,7 @@ export default function AdminPage() {
     try {
       const response = await api.patch('/quiz/config', config);
       setConfig(response.data.config); setConfigDirty(false);
-      setNotice('Round rules saved. They will be frozen when the event starts.');
+      setNotice(status === 'active' ? 'Round rules updated. Every team’s current round now uses them.' : 'Round rules saved. They apply when the event starts.');
       await refresh();
     } catch (err) { handleFailure(err); }
     finally { setBusy(''); }
@@ -180,7 +180,7 @@ export default function AdminPage() {
   };
   const serverNow = now + offset;
   const status = event?.status || 'not_started';
-  const locked = status !== 'not_started';
+  const locked = !['not_started', 'active'].includes(status);
   const eventRemaining = event?.deadline ? new Date(event.deadline).getTime() - serverNow : number(config.duration_minutes) * 60000;
   const selectedTeam = teams.find(team => team._id === filters.team_id);
   const filteredTeams = teams.filter(team => `${team.team_name} ${team.leader_name} ${team.question_set_id}`.toLowerCase().includes(search.toLowerCase()));
@@ -225,7 +225,7 @@ export default function AdminPage() {
           {['ended', 'resetting'].includes(status) && <button id="btn-reset-quiz" className="admin-button" disabled={Boolean(busy)} onClick={() => setConfirmReset(true)}>{status === 'resetting' ? 'Resume reset' : 'Reset progress'}</button>}
         </div></section>
         {confirmReset && <div className="admin-reset" role="alert"><p>Reset every team’s score, progress and round timers? Activity history stays available.</p><button className="admin-button purple" disabled={Boolean(busy)} onClick={() => action('reset')}>Reset all teams</button><button className="admin-button" onClick={() => setConfirmReset(false)}>Cancel</button></div>}
-        {showConfig && <section className="admin-panel"><div className="admin-section-title"><h2>Round rules</h2><span>{locked ? 'Frozen for this event' : 'Editable before start'}</span></div><p>Unused time carries to the next round. Overtime reduces the round reward. Skipping deducts points and can make the total negative.</p><form onSubmit={saveConfig}><fieldset disabled={locked || Boolean(busy)}>
+        {showConfig && <section className="admin-panel"><div className="admin-section-title"><h2>Round rules</h2><span>{locked ? 'Locked after the event ends' : status === 'active' ? 'Live: saving applies to every team’s current round' : 'Editable before start'}</span></div><p>Unused time carries to the next round. Overtime reduces the round reward. Skipping deducts points and can make the total negative.</p><form onSubmit={saveConfig}><fieldset disabled={locked || Boolean(busy)}>
           <label className="admin-duration">Event duration <input type="number" readOnly value={120} /> minutes (fixed)</label>
           <div className="admin-round-rules">{config.round_minutes.map((minutes, index) => <div key={index}><strong>Round {index + 1}</strong><label>Time cap (minutes)<input type="number" min="1" max="120" required value={minutes} onChange={e => roundField('round_minutes', index, e.target.value)} /></label><label>Full reward (points)<input type="number" min="1" max="10000" required value={config.round_points[index]} onChange={e => roundField('round_points', index, e.target.value)} /></label></div>)}</div>
           <div className="admin-penalty-rules"><label>Reward decrease per overtime minute (%)<input type="number" min="0" max="100" step="0.1" required value={config.overtime_decay_percent_per_minute} onChange={e => configField('overtime_decay_percent_per_minute', e.target.value)} /></label><label>Minimum round reward (%)<input type="number" min="0" max="100" step="0.1" required value={config.minimum_reward_percent} onChange={e => configField('minimum_reward_percent', e.target.value)} /></label><label>Skip penalty (% of full reward)<input type="number" min="0" max="100" step="0.1" required value={config.skip_penalty_percent} onChange={e => configField('skip_penalty_percent', e.target.value)} /></label></div>

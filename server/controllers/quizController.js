@@ -8,6 +8,7 @@ const { getEventState, defaultConfig, validateConfig } = require('../services/ev
 const { writeActivity, recordObservedTimeouts } = require('../services/activityLog');
 const { rosterFilter } = require('../services/registrationPolicy');
 const safeError = res => res.status(503).json({ error: 'Event operation failed. Refresh before retrying.' });
+const EDITABLE = ['not_started', 'active'];
 const versionFilter = version => version ? { config_version: version } :
   { $or: [{ config_version: 0 }, { config_version: { $exists: false } }] };
 
@@ -29,20 +30,22 @@ exports.getStatus = async (req, res) => {
 exports.getConfig = async (req, res) => {
   try {
     const state = await ensureState();
-    res.json({ config: getEventState(state).config, editable: state.status === 'not_started' });
+    res.json({ config: getEventState(state).config, editable: EDITABLE.includes(state.status) });
   } catch { safeError(res); }
 };
 exports.updateConfig = async (req, res) => {
   try {
     const state = await ensureState();
-    if (state.status !== 'not_started') return res.status(409).json({ error: 'Settings are frozen once the event starts.' });
+    if (!EDITABLE.includes(state.status)) return res.status(409).json({ error: 'Settings can change before the event or while it is live, not after it ends.' });
+    // While live, the active copy changes too: every team's current round, reward and skip penalty use it at once.
+    const live = state.status === 'active', before = getEventState(state).config;
     let config;
-    try { config = validateConfig({ ...(state.config || defaultConfig()), ...req.body }); }
+    try { config = validateConfig({ ...before, ...req.body }); }
     catch (error) { return res.status(400).json({ error: error.message }); }
-    const updated = await QuizState.findOneAndUpdate({ key: 'global', status: 'not_started', ...versionFilter(state.config_version) },
-      { $set: { config }, $inc: { config_version: 1 } }, { new: true });
+    const updated = await QuizState.findOneAndUpdate({ key: 'global', status: state.status, ...versionFilter(state.config_version) },
+      { $set: { config, ...(live ? { frozen_config: config } : {}) }, $inc: { config_version: 1 } }, { new: true });
     if (!updated) return res.status(409).json({ error: 'Settings or event state changed. Refresh and retry.' });
-    await writeActivity({ action: 'settings_updated', before: state.config || defaultConfig(), after: config });
+    await writeActivity({ action: 'settings_updated', before, after: config, metadata: { live } });
     res.json({ config, editable: true });
   } catch { safeError(res); }
 };
