@@ -23,7 +23,10 @@ async function getAnswerBooklet({ setId, level, rehearsalId, adminSessionId }) {
     const q = { ...question, _id: `preview-${question.set_id}-${question.level}` };
     if (question.level < 4) {
       if (selected && level && selected.question._id !== q._id) throw Object.assign(new Error('Select the matching rehearsal for this round.'), { status: 409 });
-      const document = selected?.question._id === q._id ? selected.document : await bookletRehearsal(q, adminSessionId);
+      // Answer for the instance this owner last opened for the round, so values match the screen.
+      const latest = await PuzzleRehearsal.findOne({ owner: adminSessionId, question_id: q._id, purpose: { $ne: 'booklet' },
+        expires_at: { $gt: new Date() } }).sort({ _id: -1 }).select('+private_data');
+      const document = selected?.question._id === q._id ? selected.document : latest || await bookletRehearsal(q, adminSessionId);
       rounds.push({ ...reference(q, document), rehearsal_id: String(document._id) });
     } else {
       const team = { _id: 'organizer-preview', event_run_id: 'organizer-preview-v1' }, puzzle = getPuzzle(q, team);
